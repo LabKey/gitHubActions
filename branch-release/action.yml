@@ -1,0 +1,16 @@
+  
+name: GitHub Release Branching
+author: Trey Chadick
+description: Create and Update LabKey Release Branches
+branding:
+  icon: 'git-branch'
+  color: 'black'
+inputs:
+  github_token:
+    description: GitHub token secret. Used to create branches and pull requests
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    GITHUB_TOKEN: ${{ inputs.github_token }}

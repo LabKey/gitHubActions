@@ -1,0 +1,29 @@
+  
+name: GitHub Release Merging
+author: Trey Chadick
+description: Update final release branch or merge release forward
+branding:
+  icon: 'git-branch'
+  color: 'black'
+inputs:
+  pr_number:
+    description: GitHub Pull Request ID
+    required: true
+  merge_branch:
+    description: PR head. Merge branch or fast-forward merge branch.
+    required: true
+  target_branch:
+    description: PR base. 'releaseYY.M' for updating release. 'develop' or 'releaseYY.M-SNAPSHOT' for merging release forward.
+    required: true
+  github_token:
+    description: GitHub token secret
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.pr_number }}
+    - ${{ inputs.merge_branch }}
+    - ${{ inputs.target_branch }}
+  env:
+    GITHUB_TOKEN: ${{ inputs.github_token }}
