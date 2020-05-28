@@ -1,3 +1,3 @@
-# git-sync
+# merge-release
 
-Sync a given branch with a remote using git merge --ff-only
+Merge a pull request created by the `branch-release` action.
