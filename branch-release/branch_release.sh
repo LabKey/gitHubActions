@@ -5,7 +5,7 @@ if ! [ -x "$(command -v hub)" ]; then
   exit 1
 fi
 
-TRIAGE_ALIAS='labkey-teamcity' # 'LabKey/Triage'
+TRIAGE_ALIAS='LabKey/Releasers'
 
 if [ -z $GITHUB_SHA ]; then
 	echo "Commit hash not specified" >&2
@@ -17,7 +17,7 @@ if [ -z $GITHUB_REF ]; then
 	exit 1
 fi
 
-echo $GITHUB_REF | grep '/refs/heads' && {
+echo $GITHUB_REF | grep 'refs/heads' && {
 	echo "Reference is not a tag: $GITHUB_REF" >&2
 	exit 1
 }

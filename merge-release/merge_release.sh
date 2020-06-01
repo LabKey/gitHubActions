@@ -5,7 +5,7 @@ if ! [ -x "$(command -v hub)" ]; then
   exit 1
 fi
 
-TRIAGE_ALIAS='labkey-teamcity' # 'LabKey/Triage'
+TRIAGE_ALIAS='LabKey/Releasers'
 
 # GITHUB_REPOSITORY=LabKey/platform
 # if [ -z $GITHUB_REPOSITORY ]; then
