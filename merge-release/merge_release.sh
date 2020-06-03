@@ -22,7 +22,7 @@ echo "Merge approved PR from $MERGE_BRANCH to $TARGET_BRANCH."
 git fetch --unshallow
 git checkout $TARGET_BRANCH
 if [ git merge origin/$MERGE_BRANCH -m "Merge $MERGE_BRANCH to $TARGET_BRANCH" && git push ]; then
-	;
+	echo "Merge successful!";
 else
 	echo "Failed to merge!" >&2
 	hub api repos/{owner}/{repo}/issues/$PR_NUMBER/comments --raw-field 'body=@'$TRIAGE_ALIAS' __ERROR__ Automatic merge failed!'
