@@ -7,12 +7,12 @@ fi
 
 TRIAGE_ALIAS='LabKey/Releasers'
 
-if [[ -z $GITHUB_SHA ]]; then
+if [ -z "$GITHUB_SHA" ]; then
 	echo "Commit hash not specified" >&2
 	exit 1
 fi
 
-if [[ -z $GITHUB_REF ]]; then
+if [ -z "$GITHUB_REF" ]; then
 	echo "Tag not specified" >&2
 	exit 1
 fi
@@ -28,7 +28,7 @@ TAG="$(echo "$GITHUB_REF" | sed -e 's/refs\/tags\///')"
 # Trim patch number from tag '19.3.11' => '19.3'
 RELEASE_NUM="$(echo "$TAG" | grep -oE '([0-9]+\.[0-9]+)')"
 
-if [[ -z $RELEASE_NUM ]]; then
+if [ -z "$RELEASE_NUM" ]; then
 	echo "Tag does not appear to be for a release: ${TAG}" >&2
 	exit 1
 fi
@@ -56,7 +56,7 @@ fi
 git fetch --unshallow
 RELEASE_DIFF=$(git log --cherry-pick --oneline --no-decorate origin/${RELEASE_BRANCH}..${GITHUB_SHA} | grep -v -e '^$')
 echo ""
-if [[ -z $RELEASE_DIFF ]]; then
+if [ -z "$RELEASE_DIFF" ]; then
 	echo "No changes to merge for ${TAG}."
 	exit 0
 else
@@ -88,7 +88,7 @@ case "_${release_minor}" in
   _3|_7) NEXT_RELEASE="${release_major}.$(( release_minor + 4 ))";;
 esac
 
-if [ -n $NEXT_RELEASE ]; then
+if [ -n "$NEXT_RELEASE" ]; then
 	TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
 	if [ hub api repos/{owner}/{repo}/git/refs/heads/$TARGET_BRANCH ]; then
 		MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${TAG}"
@@ -98,7 +98,7 @@ if [ -n $NEXT_RELEASE ]; then
 fi
 
 # Next release doesn't exist, merge to develop
-if [[ -z $MERGE_BRANCH ]]; then
+if [ -z "$MERGE_BRANCH" ]; then
 	TARGET_BRANCH='develop'
 	NEXT_RELEASE='develop'
 	MERGE_BRANCH=fb_merge_${TAG}
