@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Create branches and PRs
-      uses: labkey-tchad/gitHubActions/branch-release@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create branches and PRs
+        uses: labkey-tchad/gitHubActions/branch-release@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

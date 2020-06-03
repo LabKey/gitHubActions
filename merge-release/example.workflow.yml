@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Merge PR
-      uses: labkey-tchad/gitHubActions/merge-release@master
-      with:
-        target_branch: ${{ github.event.pull_request.base.ref }}
-        merge_branch: ${{ github.event.pull_request.head.ref }}
-        pr_number: ${{ github.event.pull_request.number }}
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Merge PR
+        uses: labkey-tchad/gitHubActions/merge-release@master
+        with:
+          target_branch: ${{ github.event.pull_request.base.ref }}
+          merge_branch: ${{ github.event.pull_request.head.ref }}
+          pr_number: ${{ github.event.pull_request.number }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
