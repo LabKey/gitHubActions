@@ -47,7 +47,7 @@ hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${RELEASE_BR
 RELEASE_CREATED="$?"
 echo ""
 
-if [ $SNAPSHOT_CREATED == 0 ] && [ $RELEASE_CREATED == 0 ]; then
+if [ $SNAPSHOT_CREATED == 0 ] && [ $RELEASE_CREATED == 0 ; then
 	echo "${RELEASE_NUM} branches successfully created."
 	exit 0
 fi
