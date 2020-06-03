@@ -56,7 +56,7 @@ fi
 git fetch --unshallow
 RELEASE_DIFF=$(git log --cherry-pick --oneline --no-decorate origin/${RELEASE_BRANCH}..${GITHUB_SHA} | grep -v -e '^$')
 echo ""
-if [ $? != 0 ]; then
+if [ -z $RELEASE_DIFF ]; then
 	echo "No changes to merge for ${TAG}."
 	exit 0
 else
