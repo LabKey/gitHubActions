@@ -18,10 +18,10 @@ fi
 git config --global user.name "github-actions"
 git config --global user.email "teamcity@labkey.com"
 
-echo "Merge approved PR from $MERGE_BRANCH to $TARGET_BRANCH."
+echo "Merge approved PR from ${MERGE_BRANCH} to ${TARGET_BRANCH}."
 git fetch --unshallow
 git checkout $TARGET_BRANCH
-if [ git merge origin/$MERGE_BRANCH -m "Merge $MERGE_BRANCH to $TARGET_BRANCH" && git push ]; then
+if [ git merge origin/$MERGE_BRANCH -m "Merge ${MERGE_BRANCH} to ${TARGET_BRANCH}" && git push ]; then
 	echo "Merge successful!";
 else
 	echo "Failed to merge!" >&2
