@@ -10,17 +10,5 @@ jobs:
       - name: 'Checkout'
         uses: actions/checkout@v2
 
-      - name: 'Yamllint branch-release'
-        uses: karancode/yamllint-github-action@master
-        with:
-          yamllint_file_or_dir: 'branch-release'
-
-      - name: 'Yamllint merge-release'
-        uses: karancode/yamllint-github-action@master
-        with:
-          yamllint_file_or_dir: 'merge-release'
-
-      - name: 'Yamllint workflows'
-        uses: karancode/yamllint-github-action@master
-        with:
-          yamllint_file_or_dir: '.github/workflows'
+      - name: yaml-lint
+        uses: ibiqlik/action-yamllint@v1
