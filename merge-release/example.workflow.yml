@@ -10,7 +10,9 @@ on:
 
 jobs:
   merge_release:
-    if: github.event.review.state == 'approved' && github.event.pull_request.user.login == 'github-actions[bot]'
+    if: >
+      github.event.review.state == 'approved' &&
+      github.event.pull_request.user.login == 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
