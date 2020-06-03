@@ -15,7 +15,7 @@ if [ -z $TARGET_BRANCH ] || [ -z $MERGE_BRANCH ] || [ -z $PR_NUMBER ]; then
 	exit 1
 fi
 
-git config --global user.name "github-actions[bot]"
+git config --global user.name "github-actions"
 git config --global user.email "teamcity@labkey.com"
 
 echo "Merge approved PR from $MERGE_BRANCH to $TARGET_BRANCH."
