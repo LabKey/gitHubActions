@@ -14,7 +14,7 @@ inputs:
     required: true
   target_branch:
     description: >
-      PR base. 'releaseYY.M' for updating release. 'develop' 
+      PR base. 'releaseYY.M' for updating release. 'develop'
       or 'releaseYY.M-SNAPSHOT' for merging release forward.
     required: true
   github_token:
