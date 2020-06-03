@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 
-if command -v hub; then
+if [ command -v hub ]; then
   echo 'Error: GitHub command line tool is not installed.' >&2
   exit 1
 fi
 
 TRIAGE_ALIAS='LabKey/Releasers'
 
-if [ -z $GITHUB_SHA ]; then
+if [[ -z $GITHUB_SHA ]]; then
 	echo "Commit hash not specified" >&2
 	exit 1
 fi
 
-if [ -z $GITHUB_REF ]; then
+if [[ -z $GITHUB_REF ]]; then
 	echo "Tag not specified" >&2
 	exit 1
 fi
@@ -28,7 +28,7 @@ TAG="$(echo "$GITHUB_REF" | sed -e 's/refs\/tags\///')"
 # Trim patch number from tag '19.3.11' => '19.3'
 RELEASE_NUM="$(echo "$TAG" | grep -oE '([0-9]+\.[0-9]+)')"
 
-if [ -z $RELEASE_NUM ]; then
+if [[ -z $RELEASE_NUM ]]; then
 	echo "Tag does not appear to be for a release: ${TAG}" >&2
 	exit 1
 fi
@@ -56,7 +56,7 @@ fi
 git fetch --unshallow
 RELEASE_DIFF=$(git log --cherry-pick --oneline --no-decorate origin/${RELEASE_BRANCH}..${GITHUB_SHA} | grep -v -e '^$')
 echo ""
-if [ -z $RELEASE_DIFF ]; then
+if [[ -z $RELEASE_DIFF ]]; then
 	echo "No changes to merge for ${TAG}."
 	exit 0
 else
@@ -98,7 +98,7 @@ if [ -n $NEXT_RELEASE ]; then
 fi
 
 # Next release doesn't exist, merge to develop
-if [ -z $MERGE_BRANCH ]; then
+if [[ -z $MERGE_BRANCH ]]; then
 	TARGET_BRANCH='develop'
 	NEXT_RELEASE='develop'
 	MERGE_BRANCH=fb_merge_${TAG}
@@ -132,12 +132,13 @@ else
 		echo "Unable to merge merge ${TAG} to ${NEXT_RELEASE}" >&2
 		exit 1
 	fi
-	git reset --hard $GITHUB_SHA
-	git push -u origin $MERGE_BRANCH
+
+	git reset --hard $GITHUB_SHA && git push -u origin $MERGE_BRANCH
 	if [ $? != 0 ]; then
 		echo "Failed to push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
 	fi
+
 	hub pull-request -f -h $MERGE_BRANCH -b $TARGET_BRANCH -a $TRIAGE_ALIAS -r $TRIAGE_ALIAS \
 		-m "Merge ${TAG} to ${NEXT_RELEASE} (Conflicts)" \
 		-m "_Automatic merge failed!_ Please merge '${TARGET_BRANCH}' into '${MERGE_BRANCH}' and resolve conflicts manually." \
