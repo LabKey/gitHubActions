@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-if ! [ -x "$(command -v hub)" ]; then
+if command -v hub; then
   echo 'Error: GitHub command line tool is not installed.' >&2
   exit 1
 fi
@@ -17,16 +17,16 @@ if [ -z $GITHUB_REF ]; then
 	exit 1
 fi
 
-echo $GITHUB_REF | grep 'refs/heads' && {
+if [ echo $GITHUB_REF | grep 'refs/heads' ]; then
 	echo "Reference is not a tag: $GITHUB_REF" >&2
 	exit 1
-}
+fi
 
 # Trim leading 'refs/tags/'
-TAG=$(echo "$GITHUB_REF" | sed -e 's/refs\/tags\///')
+TAG="$(echo "$GITHUB_REF" | sed -e 's/refs\/tags\///')"
 
 # Trim patch number from tag '19.3.11' => '19.3'
-RELEASE_NUM=$(echo "$TAG" | grep -oE '([0-9]+\.[0-9]+)')
+RELEASE_NUM="$(echo "$TAG" | grep -oE '([0-9]+\.[0-9]+)')"
 
 if [ -z $RELEASE_NUM ]; then
 	echo "Tag does not appear to be for a release: $TAG" >&2
@@ -80,42 +80,37 @@ else
 fi
 
 # Determine next non-monthly release
-MERGE_MAP=( "19.2:19.3"
-		    "19.3:20.3"
-  			"20.3:20.7"
-   			"20.7:20.11"
-    		"20.11:21.3"
-     		"21.3:21.7"
-      		"21.7:21.11"
-       		"21.11:22.3"
-     		"22.3:22.7"
-      		"22.7:22.11"
-       		"22.11:23.3" )
-for step in "${MERGE_MAP[@]}" ; do
-    KEY=${step%%:*}
-    VALUE=${step#*:}
-    if [ $KEY == $RELEASE_NUM ]; then
-		TARGET_BRANCH=release$VALUE-SNAPSHOT
-    	hub api repos/{owner}/{repo}/git/refs/heads/$TARGET_BRANCH && {
-			MERGE_BRANCH=$VALUE'_fb_merge_'$TAG
-			NEXT_RELEASE=$VALUE
-    	}
-		echo ""
-    	break
-    fi
-done
+release_major="$(echo "$RELEASE_NUM" | cut -d'.' -f1)"
+release_minor="$(echo "$RELEASE_NUM" | cut -d'.' -f2)"
+
+case "_${release_minor}" in
+  _11) NEXT_RELEASE="$(( release_major + 1 )).3" ;;
+  _3|_7) NEXT_RELEASE="${release_major}.$(( release_minor + 4 ))";;
+esac
+
+if [ -n $NEXT_RELEASE ]; then
+	TARGET_BRANCH=release$NEXT_RELEASE-SNAPSHOT
+	if [ hub api repos/{owner}/{repo}/git/refs/heads/$TARGET_BRANCH ]; then
+		MERGE_BRANCH=$NEXT_RELEASE'_fb_merge_'$TAG
+		NEXT_RELEASE=$NEXT_RELEASE
+	fi
+	echo ""
+	break
+fi
+
+# Next release doesn't exist, merge to develop
 if [ -z $MERGE_BRANCH ]; then
 	TARGET_BRANCH='develop'
 	NEXT_RELEASE='develop'
 	MERGE_BRANCH=fb_merge_$TAG
 fi
 
-git config --global user.name "github-actions[bot]"
+git config --global user.name "github-actions"
 git config --global user.email "teamcity@labkey.com"
 
 # Create branch and PR for merge forward
 git checkout -b $MERGE_BRANCH --no-track origin/$TARGET_BRANCH
-git merge --no-ff $GITHUB_SHA -m "Merge $TAG to $NEXT_RELEASE" && {
+if [ git merge --no-ff $GITHUB_SHA -m "Merge $TAG to $NEXT_RELEASE" ]; then
 	git push -u origin $MERGE_BRANCH
 	if [ $? != 0 ]; then
 		echo "Failed to push merge branch: $MERGE_BRANCH" >&2
@@ -130,7 +125,7 @@ git merge --no-ff $GITHUB_SHA -m "Merge $TAG to $NEXT_RELEASE" && {
 		echo "Failed to create pull request for $MERGE_BRANCH" >&2
 		exit 1
 	fi
-} || {
+else
 	# merge failed
 	git merge --abort
 	if [ $? != 0 ]; then
@@ -153,4 +148,4 @@ git merge --no-ff $GITHUB_SHA -m "Merge $TAG to $NEXT_RELEASE" && {
 		echo "Failed to create pull request for $MERGE_BRANCH" >&2
 		exit 1
 	fi
-}
+fi
