@@ -1,3 +1,4 @@
+---
 name: Docker Lint
 on: [push]
 jobs:
@@ -10,4 +11,4 @@ jobs:
       uses: luke142367/Docker-Lint-Action@v1.0.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TARGET: base/Dockerfile,branch-release/Dockerfile,merge-release/Dockerfile
+        TARGET: 'base/Dockerfile','branch-release/Dockerfile','merge-release/Dockerfile'
