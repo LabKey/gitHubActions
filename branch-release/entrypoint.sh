@@ -5,7 +5,7 @@ if [ -z "$GITHUB_TOKEN" ]; then
   exit 1
 fi
 
-if [ -d "$GITHUB_WORKSPACE" ]; then
+if [ -z "$GITHUB_WORKSPACE" ]; then
   echo "GITHUB_WORKSPACE is not available." >&2
   exit 1
 fi
