@@ -18,7 +18,7 @@ if [ -z "$GITHUB_REF" ]; then
 	exit 1
 fi
 
-if ! echo "$GITHUB_REF" | grep 'refs/heads'; then
+if ! echo "$GITHUB_REF" | grep 'refs/tags'; then
 	echo "Reference is not a tag: ${GITHUB_REF}" >&2
 	exit 1
 fi
