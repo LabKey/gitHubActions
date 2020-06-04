@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if command -v hub; then
+if ! command -v hub; then
   echo 'Error: GitHub command line tool is not installed.' >&2
   exit 1
 fi
@@ -18,7 +18,7 @@ if [ -z "$GITHUB_REF" ]; then
 	exit 1
 fi
 
-if echo "$GITHUB_REF" | grep 'refs/heads'; then
+if ! echo "$GITHUB_REF" | grep 'refs/heads'; then
 	echo "Reference is not a tag: ${GITHUB_REF}" >&2
 	exit 1
 fi

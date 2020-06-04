@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if command -v hub; then
+if ! command -v hub; then
   echo 'Error: GitHub command line tool is not installed.' >&2
   exit 1
 fi
