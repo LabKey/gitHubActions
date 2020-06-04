@@ -1,4 +1,4 @@
-  
+---
 name: GitHub Release Merging
 author: Trey Chadick
 description: Update final release branch or merge release forward
@@ -13,7 +13,9 @@ inputs:
     description: PR head. Merge branch or fast-forward merge branch.
     required: true
   target_branch:
-    description: PR base. 'releaseYY.M' for updating release. 'develop' or 'releaseYY.M-SNAPSHOT' for merging release forward.
+    description: >
+      PR base. 'releaseYY.M' for updating release. 'develop'
+      or 'releaseYY.M-SNAPSHOT' for merging release forward.
     required: true
   github_token:
     description: GitHub token secret
