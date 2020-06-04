@@ -5,7 +5,8 @@ if command -v hub; then
   exit 1
 fi
 
-TRIAGE_ALIAS='LabKey/Releasers'
+REVIEWER='LabKey/Releasers'
+ASSIGNEE='labkey-teamcity'
 
 if [ -z "$GITHUB_SHA" ]; then
 	echo "Commit hash not specified" >&2
@@ -67,7 +68,7 @@ else
 		exit 1
 	fi
 	echo "Create pull request."
-	if ! hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$TRIAGE_ALIAS" -r "$TRIAGE_ALIAS" \
+	if ! hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" \
 		-m "Fast-forward for ${TAG}" \
 		-m "_Generated automatically._" \
 		-m "**Approve all matching PRs simultaneously.**" \
@@ -112,7 +113,7 @@ if git merge --no-ff "$GITHUB_SHA" -m "Merge ${TAG} to ${NEXT_RELEASE}"; then
 		echo "Failed to push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
 	fi
-	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$TRIAGE_ALIAS" -r "$TRIAGE_ALIAS" \
+	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" \
 		-m "Merge ${TAG} to ${NEXT_RELEASE}" \
 		-m "_Generated automatically._" \
 		-m "**Approve all matching PRs simultaneously.**" \
@@ -134,7 +135,7 @@ else
 		exit 1
 	fi
 
-	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$TRIAGE_ALIAS" -r "$TRIAGE_ALIAS" \
+	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" \
 		-m "Merge ${TAG} to ${NEXT_RELEASE} (Conflicts)" \
 		-m "_Automatic merge failed!_ Please merge '${TARGET_BRANCH}' into '${MERGE_BRANCH}' and resolve conflicts manually." \
 		-m "**Approve all matching PRs simultaneously.**" \

@@ -5,7 +5,7 @@ if command -v hub; then
   exit 1
 fi
 
-TRIAGE_ALIAS='LabKey/Releasers'
+REVIEWER='LabKey/Releasers'
 
 PR_NUMBER=$1
 MERGE_BRANCH=$2 # ff_19.3.11
@@ -25,6 +25,6 @@ if git merge origin/"$MERGE_BRANCH" -m "Merge ${MERGE_BRANCH} to ${TARGET_BRANCH
 	echo "Merge successful!";
 else
 	echo "Failed to merge!" >&2
-	hub api "repos/{owner}/{repo}/issues/${PR_NUMBER}/comments" --raw-field "body=@${TRIAGE_ALIAS} __ERROR__ Automatic merge failed!"
+	hub api "repos/{owner}/{repo}/issues/${PR_NUMBER}/comments" --raw-field "body=@${REVIEWER} __ERROR__ Automatic merge failed!"
 	exit 1
 fi
