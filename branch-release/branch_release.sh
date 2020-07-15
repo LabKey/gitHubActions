@@ -5,8 +5,11 @@ if ! command -v hub; then
   exit 1
 fi
 
-REVIEWER='LabKey/Releasers'
+REVIEWER1='labkey-tchad'
+REVIEWER2='labkey-klum'
 ASSIGNEE='labkey-teamcity'
+# Reference in PR comments. Default action token can't see teams. 
+TEAM='LabKey/releasers'
 
 if [ -z "$GITHUB_SHA" ]; then
 	echo "Commit hash not specified" >&2
@@ -68,7 +71,7 @@ else
 		exit 1
 	fi
 	echo "Create pull request."
-	if ! hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" \
+	if ! hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
 		-m "Fast-forward for ${TAG}" \
 		-m "_Generated automatically._" \
 		-m "**Approve all matching PRs simultaneously.**" \
@@ -113,9 +116,9 @@ if git merge --no-ff "$GITHUB_SHA" -m "Merge ${TAG} to ${NEXT_RELEASE}"; then
 		echo "Failed to push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
 	fi
-	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" \
+	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
 		-m "Merge ${TAG} to ${NEXT_RELEASE}" \
-		-m "_Generated automatically._" \
+		-m "_Generated automatically._ (Attn: ${TEAM})" \
 		-m "**Approve all matching PRs simultaneously.**" \
 		-m "**Approval will trigger automatic merge.**";
 	then
@@ -135,9 +138,9 @@ else
 		exit 1
 	fi
 
-	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" \
+	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
 		-m "Merge ${TAG} to ${NEXT_RELEASE} (Conflicts)" \
-		-m "_Automatic merge failed!_ Please merge '${TARGET_BRANCH}' into '${MERGE_BRANCH}' and resolve conflicts manually." \
+		-m "_Automatic merge failed!_ Please merge '${TARGET_BRANCH}' into '${MERGE_BRANCH}' and resolve conflicts manually. (Attn: ${TEAM})" \
 		-m "**Approve all matching PRs simultaneously.**" \
 		-m "**Approval will trigger automatic merge.**";
 	then
