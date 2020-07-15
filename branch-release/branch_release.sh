@@ -78,7 +78,7 @@ echo ""
 if [ -z "$RELEASE_DIFF" ]; then
 	echo "No changes to merge for ${TAG}."
 	exit 0
-fi
+else
 	echo "Create fast-forward branch for ${TAG}."
 	FF_BRANCH="ff_${TAG}"
 	if ! hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${FF_BRANCH}" --raw-field "sha=${GITHUB_SHA}"; then
