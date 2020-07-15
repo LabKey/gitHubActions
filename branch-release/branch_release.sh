@@ -8,8 +8,6 @@ fi
 REVIEWER1='labkey-tchad'
 REVIEWER2='labkey-klum'
 ASSIGNEE='labkey-teamcity'
-# Reference in PR comments. Default action token can't see teams. 
-TEAM='LabKey/releasers'
 
 if [ -z "$GITHUB_SHA" ]; then
 	echo "Commit hash not specified" >&2
@@ -58,6 +56,23 @@ fi
 
 # Create branch and PR for final release
 git fetch --unshallow
+
+# Make sure tag is valid
+RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "${GITHUB_SHA}..origin/${RELEASE_BRANCH}" | grep -v -e '^$')"
+echo ""
+if [ -n "$RELEASE_DIFF" ]; then
+	echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) behind latest release." >&2
+	echo "$RELEASE_DIFF" >&2
+	exit 1
+fi
+RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${SNAPSHOT_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
+echo ""
+if [ -n "$RELEASE_DIFF" ]; then
+	echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) ahead of current snapshot branch." >&2
+	echo "$RELEASE_DIFF" >&2
+	exit 1
+fi
+
 RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${RELEASE_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
 echo ""
 if [ -z "$RELEASE_DIFF" ]; then
@@ -74,7 +89,6 @@ else
 	if ! hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
 		-m "Fast-forward for ${TAG}" \
 		-m "_Generated automatically._" \
-		-m "_(Attn: @${TEAM})_" \
 		-m "**Approve all matching PRs simultaneously.**" \
 		-m "**Approval will trigger automatic merge.**";
 	then
@@ -120,7 +134,6 @@ if git merge --no-ff "$GITHUB_SHA" -m "Merge ${TAG} to ${NEXT_RELEASE}"; then
 	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
 		-m "Merge ${TAG} to ${NEXT_RELEASE}" \
 		-m "_Generated automatically._" \
-		-m "_(Attn: @${TEAM})_" \
 		-m "**Approve all matching PRs simultaneously.**" \
 		-m "**Approval will trigger automatic merge.**";
 	then
@@ -143,7 +156,6 @@ else
 	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
 		-m "Merge ${TAG} to ${NEXT_RELEASE} (Conflicts)" \
 		-m "_Automatic merge failed!_ Please merge '${TARGET_BRANCH}' into '${MERGE_BRANCH}' and resolve conflicts manually." \
-		-m "_(Attn: @${TEAM})_" \
 		-m "**Approve all matching PRs simultaneously.**" \
 		-m "**Approval will trigger automatic merge.**";
 	then

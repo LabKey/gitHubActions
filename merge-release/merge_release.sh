@@ -5,8 +5,6 @@ if ! command -v hub; then
   exit 1
 fi
 
-TEAM='LabKey/releasers'
-
 PR_NUMBER=$1
 MERGE_BRANCH=$2 # ff_19.3.11
 TARGET_BRANCH=$3 # release19.3
@@ -25,6 +23,6 @@ if git merge origin/"$MERGE_BRANCH" -m "Merge ${MERGE_BRANCH} to ${TARGET_BRANCH
 	echo "Merge successful!";
 else
 	echo "Failed to merge!" >&2
-	hub api "repos/{owner}/{repo}/issues/${PR_NUMBER}/comments" --raw-field "body=@${TEAM} __ERROR__ Automatic merge failed!"
+	hub api "repos/{owner}/{repo}/issues/${PR_NUMBER}/comments" --raw-field "body=__ERROR__ Automatic merge failed!"
 	exit 1
 fi
