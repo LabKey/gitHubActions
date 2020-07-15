@@ -56,12 +56,29 @@ fi
 
 # Create branch and PR for final release
 git fetch --unshallow
+
+# Make sure tag is valid
+RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "${GITHUB_SHA}..origin/${RELEASE_BRANCH}" | grep -v -e '^$')"
+echo ""
+if [ -n "$RELEASE_DIFF" ]; then
+	echo "Improper release tag. ${TAG} is $(echo $RELEASE_DIFF | wc -l | xargs) commit(s) behind latest release." >&2
+	echo "$RELEASE_DIFF" >&2
+	exit 1
+fi
+RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${SNAPSHOT_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
+echo ""
+if [ -n "$RELEASE_DIFF" ]; then
+	echo "Improper release tag. ${TAG} is $(echo $RELEASE_DIFF | wc -l | xargs) commit(s) ahead of current snapshot branch." >&2
+	echo "$RELEASE_DIFF" >&2
+	exit 1
+fi
+
 RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${RELEASE_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
 echo ""
 if [ -z "$RELEASE_DIFF" ]; then
 	echo "No changes to merge for ${TAG}."
 	exit 0
-else
+fi
 	echo "Create fast-forward branch for ${TAG}."
 	FF_BRANCH="ff_${TAG}"
 	if ! hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${FF_BRANCH}" --raw-field "sha=${GITHUB_SHA}"; then
