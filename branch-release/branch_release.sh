@@ -74,6 +74,7 @@ else
 	if ! hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
 		-m "Fast-forward for ${TAG}" \
 		-m "_Generated automatically._" \
+		-m "_(Attn: @${TEAM})_" \
 		-m "**Approve all matching PRs simultaneously.**" \
 		-m "**Approval will trigger automatic merge.**";
 	then
@@ -118,7 +119,8 @@ if git merge --no-ff "$GITHUB_SHA" -m "Merge ${TAG} to ${NEXT_RELEASE}"; then
 	fi
 	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
 		-m "Merge ${TAG} to ${NEXT_RELEASE}" \
-		-m "_Generated automatically._ (Attn: ${TEAM})" \
+		-m "_Generated automatically._" \
+		-m "_(Attn: @${TEAM})_" \
 		-m "**Approve all matching PRs simultaneously.**" \
 		-m "**Approval will trigger automatic merge.**";
 	then
@@ -140,7 +142,8 @@ else
 
 	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
 		-m "Merge ${TAG} to ${NEXT_RELEASE} (Conflicts)" \
-		-m "_Automatic merge failed!_ Please merge '${TARGET_BRANCH}' into '${MERGE_BRANCH}' and resolve conflicts manually. (Attn: ${TEAM})" \
+		-m "_Automatic merge failed!_ Please merge '${TARGET_BRANCH}' into '${MERGE_BRANCH}' and resolve conflicts manually." \
+		-m "_(Attn: @${TEAM})_" \
 		-m "**Approve all matching PRs simultaneously.**" \
 		-m "**Approval will trigger automatic merge.**";
 	then
