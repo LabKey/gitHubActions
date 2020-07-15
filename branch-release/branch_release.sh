@@ -61,14 +61,14 @@ git fetch --unshallow
 RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "${GITHUB_SHA}..origin/${RELEASE_BRANCH}" | grep -v -e '^$')"
 echo ""
 if [ -n "$RELEASE_DIFF" ]; then
-	echo "Improper release tag. ${TAG} is $(echo $RELEASE_DIFF | wc -l | xargs) commit(s) behind latest release." >&2
+	echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) behind latest release." >&2
 	echo "$RELEASE_DIFF" >&2
 	exit 1
 fi
 RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${SNAPSHOT_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
 echo ""
 if [ -n "$RELEASE_DIFF" ]; then
-	echo "Improper release tag. ${TAG} is $(echo $RELEASE_DIFF | wc -l | xargs) commit(s) ahead of current snapshot branch." >&2
+	echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) ahead of current snapshot branch." >&2
 	echo "$RELEASE_DIFF" >&2
 	exit 1
 fi
