@@ -25,59 +25,83 @@ if ! echo "$GITHUB_REF" | grep 'refs/tags'; then
 fi
 
 # Trim leading 'refs/tags/'
-TAG="$(echo "$GITHUB_REF" | sed -e 's/refs\/tags\///')"
+TAG="$( echo "$GITHUB_REF" | sed -e 's/refs\/tags\///' )"
 
 # Trim patch number from tag '19.3.11' => '19.3'
-RELEASE_NUM="$(echo "$TAG" | grep -oE '([0-9]+\.[0-9]+)')"
+RELEASE_NUM="$( echo "$TAG" | grep -oE '([0-9]+\.[0-9]+)' )"
 
 if [ -z "$RELEASE_NUM" ]; then
 	echo "Tag does not appear to be for a release: ${TAG}" >&2
 	exit 1
 fi
 
+# RexExes for extracting branch information from GitHub compare API response
+# $> hub api repos/{owner}/{repo}/compare/develop...${GITHUB_SHA}) | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2
+AHEAD_BY_EXP='"ahead_by":\d+'
+BEHIND_BY_EXP='"behind_by":\d+'
+
+# Get patch number from tag '19.3.11' => '11'
+PATCH_NUMBER="$( echo "$TAG" | cut -d'.' -f3- )"
+
 SNAPSHOT_BRANCH="release${RELEASE_NUM}-SNAPSHOT"
 RELEASE_BRANCH="release${RELEASE_NUM}"
 
-# Initial release branch creation (e.g. TAG=20.7.RC0)
-echo "Create ${SNAPSHOT_BRANCH} branch."
-hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${SNAPSHOT_BRANCH}" --raw-field "sha=${GITHUB_SHA}"
-SNAPSHOT_CREATED="$?"
-echo ""
+# Just create release branches if they don't exist
+if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
+	# Check to see if TeamCity tagged the wrong branch
+	AHEAD_DEVELOP="$(hub api repos/{owner}/{repo}/compare/develop...${GITHUB_SHA} | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2)"
+	echo ""
+	if [ -z "$AHEAD_DEVELOP" ]; then
+		echo "Unable to compare ${TAG} to develop." >&2
+		exit 1
+	fi
+	if [ $AHEAD_DEVELOP > 0 ]; then
+		echo "${TAG} is ${AHEAD_DEVELOP} commits ahead of develop; refusing to create release branches." >&2
+		exit 1
+	fi
 
-echo "Create ${RELEASE_BRANCH} branch."
-hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${RELEASE_BRANCH}" --raw-field "sha=${GITHUB_SHA}"
-RELEASE_CREATED="$?"
-echo ""
+	# Initial release branch creation (e.g. TAG=20.7.RC0)
+	echo "Create ${SNAPSHOT_BRANCH} branch."
+	hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${SNAPSHOT_BRANCH}" --raw-field "sha=${GITHUB_SHA}"
+	SNAPSHOT_CREATED="$?"
+	echo ""
 
-if [ $SNAPSHOT_CREATED == 0 ] && [ $RELEASE_CREATED == 0 ]; then
-	echo "${RELEASE_NUM} branches successfully created."
-	exit 0
+	echo "Create ${RELEASE_BRANCH} branch."
+	hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${RELEASE_BRANCH}" --raw-field "sha=${GITHUB_SHA}"
+	RELEASE_CREATED="$?"
+	echo ""
+
+	if [ $SNAPSHOT_CREATED == 0 ] && [ $RELEASE_CREATED == 0 ]; then
+		echo "${RELEASE_NUM} branches successfully created."
+		exit 0
+	else
+		echo "Failed to create ${RELEASE_NUM} release branches." >&2
+		exit 1
+	fi
+fi
+
+# Tag should be at or ahead of release branch
+BEHIND_RELEASE="$(hub api repos/{owner}/{repo}/compare/${RELEASE_BRANCH}...${GITHUB_SHA} | grep -oE ${BEHIND_BY_EXP} | cut -d':' -f 2)"
+echo ""
+if [ $BEHIND_RELEASE > 0 ]; then
+	echo "Improper release tag. ${TAG} is ${BEHIND_RELEASE} commit(s) behind latest release." >&2
+	exit 1
+fi
+# Tag should not be ahead of SNAPSHOT branch
+AHEAD_SNAPSHOT="$(hub api repos/{owner}/{repo}/compare/${SNAPSHOT_BRANCH}..${GITHUB_SHA} | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2)"
+echo ""
+if [ $AHEAD_SNAPSHOT > 0 ]; then
+	echo "Improper release tag. ${TAG} is ${AHEAD_SNAPSHOT} commit(s) ahead of current snapshot branch." >&2
+	exit 1
 fi
 
 # Create branch and PR for final release
-git fetch --unshallow
-
-# Make sure tag is valid
-RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "${GITHUB_SHA}..origin/${RELEASE_BRANCH}" | grep -v -e '^$')"
-echo ""
-if [ -n "$RELEASE_DIFF" ]; then
-	echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) behind latest release." >&2
-	echo "$RELEASE_DIFF" >&2
-	exit 1
-fi
-RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${SNAPSHOT_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
-echo ""
-if [ -n "$RELEASE_DIFF" ]; then
-	echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) ahead of current snapshot branch." >&2
-	echo "$RELEASE_DIFF" >&2
-	exit 1
-fi
-
-RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${RELEASE_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
-echo ""
-if [ -z "$RELEASE_DIFF" ]; then
+if [ -z "$PATCH_NUMBER" ]; then
+	echo "${TAG} is not a patch release, just triggering merging forward."
+	echo "Delete temporary tag"
+	git push origin :refs/tags/"$TAG"
+elif [ -z "$RELEASE_DIFF" ]; then
 	echo "No changes to merge for ${TAG}."
-	exit 0
 else
 	echo "Create fast-forward branch for ${TAG}."
 	FF_BRANCH="ff_${TAG}"
@@ -121,8 +145,16 @@ if [ -z "$MERGE_BRANCH" ]; then
 	MERGE_BRANCH=fb_merge_${TAG}
 fi
 
+AHEAD_DEVELOP="$(hub api repos/{owner}/{repo}/compare/develop...${GITHUB_SHA} | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2)"
+if [ $AHEAD_DEVELOP == 0 ]; then
+	echo "${TAG} has already been merged forward."
+	exit 0
+fi
+
 git config --global user.name "github-actions"
 git config --global user.email "teamcity@labkey.com"
+
+git fetch --unshallow
 
 # Create branch and PR for merge forward
 git checkout -b "$MERGE_BRANCH" --no-track origin/"$TARGET_BRANCH"
