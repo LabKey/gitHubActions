@@ -49,13 +49,13 @@ RELEASE_BRANCH="release${RELEASE_NUM}"
 # Just create release branches if they don't exist
 if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
 	# Check to see if TeamCity tagged the wrong branch
-	AHEAD_DEVELOP="$(hub api repos/{owner}/{repo}/compare/develop...${GITHUB_SHA} | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2)"
+	AHEAD_DEVELOP="$(hub api "repos/{owner}/{repo}/compare/develop...${GITHUB_SHA}" | grep -oE "${AHEAD_BY_EXP}" | cut -d':' -f 2)"
 	echo ""
 	if [ -z "$AHEAD_DEVELOP" ]; then
 		echo "Unable to compare ${TAG} to develop." >&2
 		exit 1
 	fi
-	if [ $AHEAD_DEVELOP > 0 ]; then
+	if [ "$AHEAD_DEVELOP" -gt 0 ]; then
 		echo "${TAG} is ${AHEAD_DEVELOP} commits ahead of develop; refusing to create release branches." >&2
 		exit 1
 	fi
@@ -81,16 +81,16 @@ if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
 fi
 
 # Tag should be at or ahead of release branch
-BEHIND_RELEASE="$(hub api repos/{owner}/{repo}/compare/${RELEASE_BRANCH}...${GITHUB_SHA} | grep -oE ${BEHIND_BY_EXP} | cut -d':' -f 2)"
+BEHIND_RELEASE="$(hub api "repos/{owner}/{repo}/compare/${RELEASE_BRANCH}...${GITHUB_SHA}" | grep -oE "${BEHIND_BY_EXP}" | cut -d':' -f 2)"
 echo ""
-if [ $BEHIND_RELEASE > 0 ]; then
+if [ "$BEHIND_RELEASE" -gt 0 ]; then
 	echo "Improper release tag. ${TAG} is ${BEHIND_RELEASE} commit(s) behind latest release." >&2
 	exit 1
 fi
 # Tag should not be ahead of SNAPSHOT branch
-AHEAD_SNAPSHOT="$(hub api repos/{owner}/{repo}/compare/${SNAPSHOT_BRANCH}..${GITHUB_SHA} | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2)"
+AHEAD_SNAPSHOT="$(hub api "repos/{owner}/{repo}/compare/${SNAPSHOT_BRANCH}...${GITHUB_SHA}" | grep -oE "${AHEAD_BY_EXP}" | cut -d':' -f 2)"
 echo ""
-if [ $AHEAD_SNAPSHOT > 0 ]; then
+if [ "$AHEAD_SNAPSHOT" -gt 0 ]; then
 	echo "Improper release tag. ${TAG} is ${AHEAD_SNAPSHOT} commit(s) ahead of current snapshot branch." >&2
 	exit 1
 fi
@@ -145,8 +145,8 @@ if [ -z "$MERGE_BRANCH" ]; then
 	MERGE_BRANCH=fb_merge_${TAG}
 fi
 
-AHEAD_DEVELOP="$(hub api repos/{owner}/{repo}/compare/develop...${GITHUB_SHA} | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2)"
-if [ $AHEAD_DEVELOP == 0 ]; then
+AHEAD_DEVELOP="$(hub api "repos/{owner}/{repo}/compare/develop...${GITHUB_SHA}" | grep -oE "${AHEAD_BY_EXP}" | cut -d':' -f 2)"
+if [ "$AHEAD_DEVELOP" == 0 ]; then
 	echo "${TAG} has already been merged forward."
 	exit 0
 fi
