@@ -173,19 +173,14 @@ if git merge --no-ff "$GITHUB_SHA" -m "Merge ${TAG} to ${NEXT_RELEASE}"; then
 else
 	# merge failed
 	if ! git merge --abort; then
-		# If the --abort fails, a conflict didn't cause the merge to fail
-		echo "Unable to merge merge ${TAG} to ${NEXT_RELEASE}" >&2
+		# If the --abort fails, a conflict didn't cause the merge to fail. Probably nothing to merge.
+		echo "Nothing to merge from ${TAG} to ${NEXT_RELEASE}"
+	elif ! git commit --allow-empty -m "Placeholder for merge from ${TAG}" || ! git push -u origin "$MERGE_BRANCH"; then
+		echo "Failed to create/push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
-	fi
-
-	if ! git reset --hard "$GITHUB_SHA" || ! git push -u origin "$MERGE_BRANCH"; then
-		echo "Failed to push merge branch: ${MERGE_BRANCH}" >&2
-		exit 1
-	fi
-
-	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
+	elif ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
 		-m "Merge ${TAG} to ${NEXT_RELEASE} (Conflicts)" \
-		-m "_Automatic merge failed!_ Please merge '${TARGET_BRANCH}' into '${MERGE_BRANCH}' and resolve conflicts manually." \
+		-m "_Automatic merge failed!_ Please merge '${TAG}' into '${MERGE_BRANCH}' and resolve conflicts manually." \
 		-m "**Approve all matching PRs simultaneously.**" \
 		-m "**Approval will trigger automatic merge.**";
 	then
