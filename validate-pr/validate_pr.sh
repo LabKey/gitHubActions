@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if ! command -v hub; then
-	echo 'Error: GitHub command line tool is not installed.' >&2
+    echo 'Error: GitHub command line tool is not installed.' >&2
 fi
 
 PR_NUMBER=$1
@@ -11,72 +11,72 @@ PR_TITLE=$4
 ERROR_FILE="errors.tmp"
 
 if [ -z "$BASE_BRANCH" ] || [ -z "$HEAD_BRANCH" ] || [ -z "$PR_NUMBER" ] || [ -z "$PR_TITLE" ]; then
-	echo "PR info not specified" >&2
-	exit 1
+    echo "PR info not specified" >&2
+    exit 1
 fi
 
 if [ -f "$ERROR_FILE" ]; then
-	rm "$ERROR_FILE"
+    rm "$ERROR_FILE"
 fi
 
-REL_PATTERN='^release([0-9]+\.[0-9]+)$'				# release20.11
-SNAP_PATTERN='^release([0-9]+\.[0-9]+)-SNAPSHOT$'	# release20.11-SNAPSHOT
-FF_PATTERN='^ff_([0-9]+\.[0-9]+).+'					# ff_20.11.0
-FB_PATTERN='^fb_.+'									# fb_newFeature_12345
-RFB_PATTERN='^([0-9]+\.[0-9]+)_fb_.+'				# 20.11_fb_backportFeature_12345
+REL_PATTERN='^release([0-9]+\.[0-9]+)$'           # release20.11
+SNAP_PATTERN='^release([0-9]+\.[0-9]+)-SNAPSHOT$' # release20.11-SNAPSHOT
+FF_PATTERN='^ff_([0-9]+\.[0-9]+).+'               # ff_20.11.0
+FB_PATTERN='^fb_.+'                               # fb_newFeature_12345
+RFB_PATTERN='^([0-9]+\.[0-9]+)_fb_.+'             # 20.11_fb_backportFeature_12345
 
 {
-if [[ "$HEAD_BRANCH" =~ $FB_PATTERN ]]; then
-	if [ "$BASE_BRANCH" != "develop" ]; then
-		echo "Expect PR from \`${HEAD_BRANCH}\` to target \`develop\`, not \`${BASE_BRANCH}\`"
-		if [[ "$BASE_BRANCH" =~ $SNAP_PATTERN ]] || [[ "$BASE_BRANCH" =~ $REL_PATTERN ]]; then
-			version=${BASH_REMATCH[1]}
-			echo "If this branch is intended for ${version}, it should be named \`${version}_${HEAD_BRANCH}\`"
-			echo "_Note: A new PR will have to be created_"
-		fi
-	fi
-elif [[ "$HEAD_BRANCH" =~ $RFB_PATTERN ]]; then
-	version=${BASH_REMATCH[1]}
-	expected_branch="release${version}-SNAPSHOT"
-	if [ "$BASE_BRANCH" != "$expected_branch" ]; then
-		echo "Expect PR from \`${HEAD_BRANCH}\` to target \`${expected_branch}\`, not \`${BASE_BRANCH}\`"
-	fi
-elif [[ "$HEAD_BRANCH" =~ $FF_PATTERN ]]; then
-	version=${BASH_REMATCH[1]}
-	expected_branch="release${version}"
-	if [ "$BASE_BRANCH" != "$expected_branch" ]; then
-		echo "Expect PR from \`${HEAD_BRANCH}\` to target \`${expected_branch}\`, not \`${BASE_BRANCH}\`"
-		echo "_Note: \`ff_*\` branches are reserved for our release process._"
-	fi
-elif [[ "$BASE_BRANCH" =~ $SNAP_PATTERN ]] || [[ "$BASE_BRANCH" =~ $REL_PATTERN ]]; then
-	version=${BASH_REMATCH[1]}
-	echo "Branch doesn't match LabKey naming scheme"
-	echo "Branch intended for \`${version}\` should be named something like \`${version}_fb_${HEAD_BRANCH}\`"
-	echo "_Note: A new PR will have to be created_"
-elif [ "$BASE_BRANCH" == "develop" ]; then
-	echo "Branch doesn't match LabKey naming scheme"
-	echo "Branch intended for \`develop\` should be named something like \`fb_${HEAD_BRANCH}\`"
-	echo "_Note: A new PR will have to be created_"
-fi
+    if [[ "$HEAD_BRANCH" =~ $FB_PATTERN ]]; then
+        if [ "$BASE_BRANCH" != "develop" ]; then
+            echo "Expect PR from \`${HEAD_BRANCH}\` to target \`develop\`, not \`${BASE_BRANCH}\`"
+            if [[ "$BASE_BRANCH" =~ $SNAP_PATTERN ]] || [[ "$BASE_BRANCH" =~ $REL_PATTERN ]]; then
+                version=${BASH_REMATCH[1]}
+                echo "If this branch is intended for ${version}, it should be named \`${version}_${HEAD_BRANCH}\`"
+                echo "_Note: A new PR will have to be created_"
+            fi
+        fi
+    elif [[ "$HEAD_BRANCH" =~ $RFB_PATTERN ]]; then
+        version=${BASH_REMATCH[1]}
+        expected_branch="release${version}-SNAPSHOT"
+        if [ "$BASE_BRANCH" != "$expected_branch" ]; then
+            echo "Expect PR from \`${HEAD_BRANCH}\` to target \`${expected_branch}\`, not \`${BASE_BRANCH}\`"
+        fi
+    elif [[ "$HEAD_BRANCH" =~ $FF_PATTERN ]]; then
+        version=${BASH_REMATCH[1]}
+        expected_branch="release${version}"
+        if [ "$BASE_BRANCH" != "$expected_branch" ]; then
+            echo "Expect PR from \`${HEAD_BRANCH}\` to target \`${expected_branch}\`, not \`${BASE_BRANCH}\`"
+            echo "_Note: \`ff_*\` branches are reserved for our release process._"
+        fi
+    elif [[ "$BASE_BRANCH" =~ $SNAP_PATTERN ]] || [[ "$BASE_BRANCH" =~ $REL_PATTERN ]]; then
+        version=${BASH_REMATCH[1]}
+        echo "Branch doesn't match LabKey naming scheme"
+        echo "Branch intended for \`${version}\` should be named something like \`${version}_fb_${HEAD_BRANCH}\`"
+        echo "_Note: A new PR will have to be created_"
+    elif [ "$BASE_BRANCH" == "develop" ]; then
+        echo "Branch doesn't match LabKey naming scheme"
+        echo "Branch intended for \`develop\` should be named something like \`fb_${HEAD_BRANCH}\`"
+        echo "_Note: A new PR will have to be created_"
+    fi
 
-if [[ "$BASE_BRANCH" =~ $REL_PATTERN ]] && ! [[ "$HEAD_BRANCH" =~ $FF_PATTERN ]]; then
-	echo "_Note: Pull requests should not target non-snapshot release branches directly._" >>"$ERROR_FILE"
-fi
+    if [[ "$BASE_BRANCH" =~ $REL_PATTERN ]] && ! [[ "$HEAD_BRANCH" =~ $FF_PATTERN ]]; then
+        echo "_Note: Pull requests should not target non-snapshot release branches directly._" >>"$ERROR_FILE"
+    fi
 } >>"$ERROR_FILE"
 
 DEFAULT_TITLE="^Fb | fb "
 if [[ "$PR_TITLE" =~ $DEFAULT_TITLE ]]; then
-	if [ -f "$ERROR_FILE" ]; then
-		echo "" >>"$ERROR_FILE" # Insert blank line after other errors.
-	fi
-	echo "This PR appears to have the default title generated by GitHub. Please use something more descriptive." >>"$ERROR_FILE"
+    if [ -f "$ERROR_FILE" ]; then
+        echo "" >>"$ERROR_FILE" # Insert blank line after other errors.
+    fi
+    echo "This PR appears to have the default title generated by GitHub. Please use something more descriptive." >>"$ERROR_FILE"
 fi
 
-if [ "$(wc -l < "${ERROR_FILE}")" -gt 0 ]; then
-	cat "$ERROR_FILE" >&2
-	if [ "$PR_NUMBER" != "TEST" ]; then
-		hub api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --field "body=@${ERROR_FILE}"
-	else
-		exit 1 # Allow easier testing
-	fi
+if [ "$(wc -l <"${ERROR_FILE}")" -gt 0 ]; then
+    cat "$ERROR_FILE" >&2
+    if [ "$PR_NUMBER" != "TEST" ]; then
+        hub api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --field "body=@${ERROR_FILE}"
+    else
+        exit 1 # Allow easier testing
+    fi
 fi
