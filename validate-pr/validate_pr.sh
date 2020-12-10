@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# bash strict mode -- http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
+IFS=$'\n\t'
+
 if ! command -v hub; then
     echo 'Error: GitHub command line tool is not installed.' >&2
 fi
@@ -87,5 +91,5 @@ if [ "$(wc -l <"${ERROR_FILE}")" -gt 0 ]; then
         exit 1 # Allow easier testing
     fi
 else
-    echo "Pull request, '${PR_TITLE}', from '${HEAD_BRANCH}' to '${BASE_BRANCH}' looks good."
+    echo "Pull request '${PR_TITLE}' from '${HEAD_BRANCH}' to '${BASE_BRANCH}' looks good."
 fi
