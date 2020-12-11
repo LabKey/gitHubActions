@@ -5,4 +5,4 @@ if [ -z "$GITHUB_TOKEN" ]; then
   exit 1
 fi
 
-./validate_pr.sh "$@"
+bash -c "/validate_pr.sh $*"

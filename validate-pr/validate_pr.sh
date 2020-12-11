@@ -6,19 +6,15 @@ IFS=$'\n\t'
 
 if ! command -v hub; then
     echo 'Error: GitHub command line tool is not installed.' >&2
+    # Don't error. Might not even need it.
 fi
-
-PR_NUMBER=$1
-HEAD_BRANCH=$2 # fb_featureName
-BASE_BRANCH=$3 # develop
-PR_TITLE=$4
-ERROR_FILE="errors.tmp"
 
 if [ -z "$BASE_BRANCH" ] || [ -z "$HEAD_BRANCH" ] || [ -z "$PR_NUMBER" ] || [ -z "$PR_TITLE" ]; then
     echo "PR info not specified" >&2
     exit 1
 fi
 
+ERROR_FILE="errors.tmp"
 if [ -f "$ERROR_FILE" ]; then
     rm "$ERROR_FILE"
 fi

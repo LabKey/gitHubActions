@@ -4,7 +4,7 @@ author: Trey Chadick
 description: Create and Update LabKey Release Branches
 branding:
   icon: 'git-branch'
-  color: 'black'
+  color: 'blue'
 inputs:
   github_token:
     description: GitHub token secret. Used to create branches and pull requests
