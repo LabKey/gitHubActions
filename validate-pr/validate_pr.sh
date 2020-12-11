@@ -33,7 +33,6 @@ RFB_PATTERN='^([0-9]+\.[0-9]+)_fb_.+'             # 20.11_fb_backportFeature_123
             if [[ "$BASE_BRANCH" =~ $SNAP_PATTERN ]] || [[ "$BASE_BRANCH" =~ $REL_PATTERN ]]; then
                 version=${BASH_REMATCH[1]}
                 echo "If this branch is intended for ${version}, it should be named \`${version}_${HEAD_BRANCH}\`"
-                echo "_Note: A new PR will have to be created_"
             fi
         fi
     # 'XX.Y_fb_*' should target 'releaseXX.Y-SNAPSHOT'
