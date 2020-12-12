@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# bash strict mode -- http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
+IFS=$'\n\t'
+
 if ! command -v hub; then
   echo 'Error: GitHub command line tool is not installed.' >&2
   exit 1
@@ -9,12 +13,12 @@ REVIEWER1='labkey-tchad'
 REVIEWER2='labkey-klum'
 ASSIGNEE='labkey-teamcity'
 
-if [ -z "$GITHUB_SHA" ]; then
+if [ -z "${GITHUB_SHA:-}" ]; then
 	echo "Commit hash not specified" >&2
 	exit 1
 fi
 
-if [ -z "$GITHUB_REF" ]; then
+if [ -z "${GITHUB_REF:-}" ]; then
 	echo "Tag not specified" >&2
 	exit 1
 fi
@@ -30,7 +34,7 @@ TAG="$( echo "$GITHUB_REF" | sed -e 's/refs\/tags\///' )"
 # Trim patch number from tag '19.3.11' => '19.3'
 RELEASE_NUM="$( echo "$TAG" | grep -oE '([0-9]+\.[0-9]+)' )"
 
-if [ -z "$RELEASE_NUM" ]; then
+if [ -z "${RELEASE_NUM:-}" ]; then
 	echo "Tag does not appear to be for a release: ${TAG}" >&2
 	exit 1
 fi
@@ -80,7 +84,7 @@ if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
 fi
 
 # Create branch and PR for final release
-git fetch --unshallow
+git fetch --unshallow || true
 
 # Make sure tag is valid
 RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "${GITHUB_SHA}..origin/${RELEASE_BRANCH}" | grep -v -e '^$')"
@@ -101,11 +105,11 @@ fi
 RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${RELEASE_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
 echo ""
 # Create branch and PR for final release
-if [ -z "$PATCH_NUMBER" ]; then
+if [ -z "${PATCH_NUMBER:-}" ]; then
 	echo "${TAG} does not look like a patch release, just triggering merging forward."
 	echo "Deleting temporary tag"
 	git push origin :"$GITHUB_REF"
-elif [ -z "$RELEASE_DIFF" ]; then
+elif [ -z "${RELEASE_DIFF:-}" ]; then
 	echo "No changes to merge for ${TAG}."
 	exit 0
 else
@@ -127,25 +131,53 @@ else
 	fi
 fi
 
-# Determine next non-monthly release
+# Determine next ESR release
 release_major="$(echo "$RELEASE_NUM" | cut -d'.' -f1)"
 release_minor="$(echo "$RELEASE_NUM" | cut -d'.' -f2)"
+
+if [ "$release_minor" -gt 12 ]; then
+    echo "Minor release '${release_minor}' not compatible with release script. Release process needs to be updated." >&2
+    exit 1
+fi
 
 case "_${release_minor}" in
   _11) NEXT_RELEASE="$(( release_major + 1 )).3" ;;
   _3|_7) NEXT_RELEASE="${release_major}.$(( release_minor + 4 ))";;
 esac
 
-if [ -n "$NEXT_RELEASE" ]; then
-	TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
+if [ -n "${NEXT_RELEASE:-}" ]; then
+    TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
 	if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
 		MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${TAG}"
 	fi
 	echo ""
 fi
 
+# Next release doesn't exist, check for unreleased monthly version (no '.0' release yet)
+if [ -n "${NEXT_RELEASE:-}" ] && [ -z "${MERGE_BRANCH:-}" ]; then
+    temp_major="$release_major"
+    temp_minor="$release_minor"
+    for _ in 1 2 3; do
+        # Calculate next monthly release
+        case "_${temp_minor}" in
+          _12) NEXT_RELEASE="$(( temp_major + 1 )).1" ;;
+          *) NEXT_RELEASE="${temp_major}.$(( temp_minor + 1 ))";;
+        esac
+        # Check for '.0' tag
+        if ! git tag -l | grep "${NEXT_RELEASE}.0" ; then
+            TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
+            if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
+                # 'SNAPSHOT' branch exists but '.0' release hasn't been created. Merge to it!
+                MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${TAG}"
+            fi
+            echo ""
+            break # Found version without a '.0' tag. Break whether it is a valid merge target or not.
+        fi
+    done
+fi
+
 # Next release doesn't exist, merge to develop
-if [ -z "$MERGE_BRANCH" ]; then
+if [ -z "${MERGE_BRANCH:-}" ]; then
 	TARGET_BRANCH='develop'
 	NEXT_RELEASE='develop'
 	MERGE_BRANCH=fb_merge_${TAG}

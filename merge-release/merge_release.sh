@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# bash strict mode -- http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
+IFS=$'\n\t'
+
 if ! command -v hub; then
   echo 'Error: GitHub command line tool is not installed.' >&2
   exit 1
@@ -8,7 +12,7 @@ fi
 PR_NUMBER=$1
 MERGE_BRANCH=$2 # ff_19.3.11
 TARGET_BRANCH=$3 # release19.3
-if [ -z "$TARGET_BRANCH" ] || [ -z "$MERGE_BRANCH" ] || [ -z "$PR_NUMBER" ]; then
+if [ -z "${TARGET_BRANCH:-}" ] || [ -z "${MERGE_BRANCH:-}" ] || [ -z "${PR_NUMBER:-}" ]; then
 	echo "PR info not specified" >&2
 	exit 1
 fi
