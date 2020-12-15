@@ -1,0 +1,32 @@
+---
+name: GitHub Pull Request Validation
+author: Trey Chadick
+description: Verify Pull Request Target Branch
+branding:
+  icon: 'git-pull-request'
+  color: 'orange'
+inputs:
+  pr_number:
+    description: GitHub Pull Request ID
+    required: true
+  pr_head:
+    description: PR head
+    required: true
+  pr_base:
+    description: PR base
+    required: true
+  pr_title:
+    description: GitHub Pull Request Title
+    required: true
+  github_token:
+    description: GitHub token secret
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    PR_NUMBER: ${{ inputs.pr_number }}
+    PR_TITLE: ${{ inputs.pr_title }}
+    BASE_BRANCH: ${{ inputs.pr_base }}
+    HEAD_BRANCH: ${{ inputs.pr_head }}
+    GITHUB_TOKEN: ${{ inputs.github_token }}

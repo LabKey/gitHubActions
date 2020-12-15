@@ -3,8 +3,8 @@ name: GitHub Release Merging
 author: Trey Chadick
 description: Update final release branch or merge release forward
 branding:
-  icon: 'git-branch'
-  color: 'black'
+  icon: 'git-merge'
+  color: 'gray-dark'
 inputs:
   pr_number:
     description: GitHub Pull Request ID
