@@ -29,7 +29,7 @@ RFB_PATTERN='^([0-9]+\.[0-9]+)_fb_.+'             # 20.11_fb_backportFeature_123
     # 'fb_*' should target 'develop'
     if [[ "$HEAD_BRANCH" =~ $FB_PATTERN ]]; then
         if [ "$BASE_BRANCH" != "develop" ]; then
-            echo "Expect PR from \`${HEAD_BRANCH}\` to target \`develop\`, not \`${BASE_BRANCH}\`"
+            echo "A pull request from \`${HEAD_BRANCH}\` is expected to target \`develop\`, not \`${BASE_BRANCH}\`"
             if [[ "$BASE_BRANCH" =~ $SNAP_PATTERN ]] || [[ "$BASE_BRANCH" =~ $REL_PATTERN ]]; then
                 version=${BASH_REMATCH[1]}
                 echo "If this branch is intended for ${version}, it should be named \`${version}_${HEAD_BRANCH}\`"
@@ -40,14 +40,14 @@ RFB_PATTERN='^([0-9]+\.[0-9]+)_fb_.+'             # 20.11_fb_backportFeature_123
         version=${BASH_REMATCH[1]}
         expected_branch="release${version}-SNAPSHOT"
         if [ "$BASE_BRANCH" != "$expected_branch" ]; then
-            echo "Expect PR from \`${HEAD_BRANCH}\` to target \`${expected_branch}\`, not \`${BASE_BRANCH}\`"
+            echo "A pull request from \`${HEAD_BRANCH}\` is expected to target \`${expected_branch}\`, not \`${BASE_BRANCH}\`"
         fi
     # 'ff_XX.Y.Z' should target 'releaseXX.Y'
     elif [[ "$HEAD_BRANCH" =~ $FF_PATTERN ]]; then
         version=${BASH_REMATCH[1]}
         expected_branch="release${version}"
         if [ "$BASE_BRANCH" != "$expected_branch" ]; then
-            echo "Expect PR from \`${HEAD_BRANCH}\` to target \`${expected_branch}\`, not \`${BASE_BRANCH}\`"
+            echo "A pull request from \`${HEAD_BRANCH}\` is expected to target \`${expected_branch}\`, not \`${BASE_BRANCH}\`"
             echo "_Note: \`ff_*\` branches are reserved for LabKey's semi-automated release process._"
         fi
     # Warn about non-standard branch targeting a release branch
