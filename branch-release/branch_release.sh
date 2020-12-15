@@ -149,31 +149,39 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
 	if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
 		MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${TAG}"
-	fi
-	echo ""
-fi
-
-# Next release doesn't exist, check for unreleased monthly version (no '.0' release yet)
-if [ -n "${NEXT_RELEASE:-}" ] && [ -z "${MERGE_BRANCH:-}" ]; then
-    temp_major="$release_major"
-    temp_minor="$release_minor"
-    for _ in 1 2 3; do
-        # Calculate next monthly release
-        case "_${temp_minor}" in
-          _12) NEXT_RELEASE="$(( temp_major + 1 )).1" ;;
-          *) NEXT_RELEASE="${temp_major}.$(( temp_minor + 1 ))";;
-        esac
-        # Check for '.0' tag
-        if ! git tag -l | grep "${NEXT_RELEASE}.0" ; then
-            TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
-            if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
-                # 'SNAPSHOT' branch exists but '.0' release hasn't been created. Merge to it!
-                MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${TAG}"
-            fi
-            echo ""
-            break # Found version without a '.0' tag. Break whether it is a valid merge target or not.
+    else
+        echo ""
+        echo "Next ESR release '${TARGET_BRANCH}' doesn't exist. Consider merging to unreleased monthly version."
+        # Next release doesn't exist, check for unreleased monthly version (no '.0' release yet)
+        if [ -n "${NEXT_RELEASE:-}" ] && [ -z "${MERGE_BRANCH:-}" ]; then
+            temp_major="$release_major"
+            temp_minor="$release_minor"
+            for _ in 1 2 3; do
+                # Calculate next monthly release
+                case "_${temp_minor}" in
+                  _12) NEXT_RELEASE="$(( temp_major + 1 )).1" ;;
+                  *) NEXT_RELEASE="${temp_major}.$(( temp_minor + 1 ))";;
+                esac
+                # Check for '.0' tag
+                if ! git tag -l | grep "${NEXT_RELEASE}.0" ; then
+                    echo "Monthly release ${NEXT_RELEASE}.0 doesn't exist. Check for branch."
+                    TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
+                    if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
+                        # 'SNAPSHOT' branch exists but '.0' release hasn't been created. Merge to it!
+                        MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${TAG}"
+                    else
+                        echo ""
+                        echo "${TARGET_BRANCH} doesn't exist. No eligible monthly release to merge to."
+                    fi
+                    break # Found version without a '.0' tag. Break whether it is a valid merge target or not.
+                else
+                    echo "Monthly release ${NEXT_RELEASE}.0 already exists. Don't merge to it."
+                fi
+            done
         fi
-    done
+	fi
+else
+    echo "${TAG} is not from an ESR release. Merge directly to develop"
 fi
 
 # Next release doesn't exist, merge to develop
@@ -182,6 +190,9 @@ if [ -z "${MERGE_BRANCH:-}" ]; then
 	NEXT_RELEASE='develop'
 	MERGE_BRANCH=fb_merge_${TAG}
 fi
+
+echo ""
+echo "Merging ${TAG} to ${TARGET_BRANCH}"
 
 git config --global user.name "github-actions"
 git config --global user.email "teamcity@labkey.com"
