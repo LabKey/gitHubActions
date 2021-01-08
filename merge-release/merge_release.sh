@@ -17,13 +17,17 @@ if [ -z "${TARGET_BRANCH:-}" ] || [ -z "${MERGE_BRANCH:-}" ] || [ -z "${PR_NUMBE
 	exit 1
 fi
 
+# Extract version from branch name (e.g. "20.11.3" from "21.1_fb_merge_20.11.3")
+VERSION="$( echo "$MERGE_BRANCH" | grep -oE '([^_]+)$' )"
+
 git config --global user.name "github-actions"
 git config --global user.email "teamcity@labkey.com"
 
 echo "Merge approved PR from ${MERGE_BRANCH} to ${TARGET_BRANCH}."
+
 git fetch --unshallow
 git checkout "$TARGET_BRANCH"
-if git merge origin/"$MERGE_BRANCH" -m "Merge ${MERGE_BRANCH} to ${TARGET_BRANCH}" && git push; then
+if git merge origin/"$MERGE_BRANCH" -m "Merge ${VERSION} to ${TARGET_BRANCH}" && git push; then
 	echo "Merge successful!";
 else
 	echo "Failed to merge!" >&2

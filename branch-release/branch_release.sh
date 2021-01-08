@@ -39,6 +39,15 @@ if [ -z "${RELEASE_NUM:-}" ]; then
 	exit 1
 fi
 
+function pr_msg() {
+    echo "[bot] $1" # First parameter is PR title
+    echo "" # Blank line represents end of PR title
+    shift 1 # Remove title from parameter list
+    for value in "$@"; do
+        echo "$value"
+    done
+}
+
 # RexEx for extracting branch information from GitHub compare JSON response
 # $> hub api repos/{owner}/{repo}/compare/develop...${GITHUB_SHA}) | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2
 AHEAD_BY_EXP='"ahead_by":\d+'
@@ -110,8 +119,7 @@ if [ -z "${PATCH_NUMBER:-}" ]; then
 	echo "Deleting temporary tag"
 	git push origin :"$GITHUB_REF"
 elif [ -z "${RELEASE_DIFF:-}" ]; then
-	echo "No changes to merge for ${TAG}."
-	exit 0
+	echo "No new changes for ${RELEASE_BRANCH} in ${TAG}."
 else
 	echo "Create fast-forward branch for ${TAG}."
 	FF_BRANCH="ff_${TAG}"
@@ -120,11 +128,11 @@ else
 		exit 1
 	fi
 	echo "Create pull request."
-	if ! hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
-		-m "Fast-forward for ${TAG}" \
-		-m "_Generated automatically._" \
-		-m "**Approve all matching PRs simultaneously.**" \
-		-m "**Approval will trigger automatic merge.**";
+	if ! pr_msg "Fast-forward for ${TAG}" \
+		"_Generated automatically._" \
+		"**Approve all matching PRs simultaneously.**" \
+		"**Approval will trigger automatic merge.**" \
+		| hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
 	then
 		echo "Failed to create pull request for $FF_BRANCH" >&2
 		exit 1
@@ -159,9 +167,15 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
             for _ in 1 2 3; do
                 # Calculate next monthly release
                 case "_${temp_minor}" in
-                  _12) NEXT_RELEASE="$(( temp_major + 1 )).1" ;;
-                  *) NEXT_RELEASE="${temp_major}.$(( temp_minor + 1 ))";;
+                  _12)
+                    temp_major="$(( temp_major + 1 ))"
+                    temp_minor="1"
+                    ;;
+                  *)
+                    temp_minor="$(( temp_minor + 1 ))"
+                    ;;
                 esac
+                NEXT_RELEASE="${temp_major}.${temp_minor}"
                 # Check for '.0' tag
                 if ! git tag -l | grep "${NEXT_RELEASE}.0" ; then
                     echo "Monthly release ${NEXT_RELEASE}.0 doesn't exist. Check for branch."
@@ -204,11 +218,11 @@ if git merge --no-ff "$GITHUB_SHA" -m "Merge ${TAG} to ${NEXT_RELEASE}"; then
 		echo "Failed to push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
 	fi
-	if ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
-		-m "Merge ${TAG} to ${NEXT_RELEASE}" \
-		-m "_Generated automatically._" \
-		-m "**Approve all matching PRs simultaneously.**" \
-		-m "**Approval will trigger automatic merge.**";
+	if ! pr_msg "Merge ${TAG} to ${NEXT_RELEASE}" \
+		"_Generated automatically._" \
+		"**Approve all matching PRs simultaneously.**" \
+		"**Approval will trigger automatic merge.**" \
+		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
 	then
 		echo "Failed to create pull request for ${MERGE_BRANCH}" >&2
 		exit 1
@@ -218,14 +232,16 @@ else
 	if ! git merge --abort; then
 		# If the --abort fails, a conflict didn't cause the merge to fail. Probably nothing to merge.
 		echo "Nothing to merge from ${TAG} to ${NEXT_RELEASE}"
-	elif ! git commit --allow-empty -m "Placeholder for merge from ${TAG}" || ! git push -u origin "$MERGE_BRANCH"; then
+	elif ! git commit --allow-empty -m "Reset branch to ${TARGET_BRANCH} before merging and resolving conflicts with ${TAG}" || ! git push -u origin "$MERGE_BRANCH"; then
 		echo "Failed to create/push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
-	elif ! hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" \
-		-m "Merge ${TAG} to ${NEXT_RELEASE} (Conflicts)" \
-		-m "_Automatic merge failed!_ Please merge '${TAG}' into '${MERGE_BRANCH}' and resolve conflicts manually." \
-		-m "**Approve all matching PRs simultaneously.**" \
-		-m "**Approval will trigger automatic merge.**";
+	elif ! pr_msg \
+		"Merge ${TAG} to ${NEXT_RELEASE} (Conflicts)" \
+		"_Automatic merge failed!_ Please merge \`${TAG}\` into \`${MERGE_BRANCH}\` and resolve conflicts manually." \
+		"Reset branch to ${TARGET_BRANCH} before merging and resolving conflicts with ${TAG}" \
+		"**Approve all matching PRs simultaneously.**" \
+		"**Approval will trigger automatic merge.**" \
+		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
 	then
 		echo "Failed to create pull request for ${MERGE_BRANCH}" >&2
 		exit 1
