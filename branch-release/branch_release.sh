@@ -159,9 +159,15 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
             for _ in 1 2 3; do
                 # Calculate next monthly release
                 case "_${temp_minor}" in
-                  _12) NEXT_RELEASE="$(( temp_major + 1 )).1" ;;
-                  *) NEXT_RELEASE="${temp_major}.$(( temp_minor + 1 ))";;
+                  _12)
+                    temp_major="$(( temp_major + 1 ))"
+                    temp_minor="1"
+                    ;;
+                  *)
+                    temp_minor="$(( temp_minor + 1 ))"
+                    ;;
                 esac
+                NEXT_RELEASE="${temp_major}.${temp_minor}"
                 # Check for '.0' tag
                 if ! git tag -l | grep "${NEXT_RELEASE}.0" ; then
                     echo "Monthly release ${NEXT_RELEASE}.0 doesn't exist. Check for branch."
