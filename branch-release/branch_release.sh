@@ -205,6 +205,7 @@ echo "Merging ${TAG} to ${TARGET_BRANCH}"
 RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${TARGET_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
 if [ -z "${RELEASE_DIFF:-}" ]; then
 	echo "No changes to merge from ${TAG} to ${TARGET_BRANCH}."
+	exit 0
 fi
 
 git config --global user.name "github-actions"
