@@ -39,6 +39,8 @@ if [ -z "${RELEASE_NUM:-}" ]; then
 	exit 1
 fi
 
+# TODO: Use ${GITHUB_REPOSITORY} == "LabKey/server" to trigger special behavior
+
 # RexEx for extracting branch information from GitHub compare JSON response
 # $> hub api repos/{owner}/{repo}/compare/develop...${GITHUB_SHA}) | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2
 AHEAD_BY_EXP='"ahead_by":\d+'
@@ -199,6 +201,12 @@ fi
 
 echo ""
 echo "Merging ${TAG} to ${TARGET_BRANCH}"
+
+RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${TARGET_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
+if [ -z "${RELEASE_DIFF:-}" ]; then
+	echo "No changes to merge from ${TAG} to ${TARGET_BRANCH}."
+	exit 0
+fi
 
 git config --global user.name "github-actions"
 git config --global user.email "teamcity@labkey.com"
