@@ -57,7 +57,7 @@ AHEAD_BY_EXP='"ahead_by":\d+'
 # Get patch number from tag '19.3.11' => '11'
 PATCH_NUMBER="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '(^[0-9]+$)' )"
 
-# Don't include full tag in PR and branch names for non-releases (e.g. '21.10.Merge') 
+# Don't include full tag in PR and branch names for non-releases (e.g. '21.10.Merge')
 if [ -z "${PATCH_NUMBER:-}" ]; then
 	SOURCE_VERSION=$RELEASE_NUM;
 else
@@ -262,7 +262,7 @@ else
 		"git fetch" \
 		"git checkout ${MERGE_BRANCH}" \
 		"git reset --hard origin/${TARGET_BRANCH}" \
-		"git merge ${GITHUB_SHA} -m "Merge ${SOURCE_VERSION} to ${NEXT_RELEASE}"" \
+		"git merge ${GITHUB_SHA} -m \"Merge ${SOURCE_VERSION} to ${NEXT_RELEASE}\"" \
 		"# resolve all conflicts" \
 		"git commit" \
 		"git push --force" \
