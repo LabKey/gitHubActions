@@ -230,7 +230,7 @@ git config --global user.email "teamcity@labkey.com"
 # Create branch and PR for merge forward
 git checkout -b "$MERGE_BRANCH" --no-track origin/"$TARGET_BRANCH"
 if git merge --no-ff "$GITHUB_SHA" -m "Merge ${SOURCE_VERSION} to ${NEXT_RELEASE}"; then
-	if ! git push -u origin "$MERGE_BRANCH"; then
+	if ! git push --force -u origin "$MERGE_BRANCH"; then
 		echo "Failed to push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
 	fi
@@ -251,7 +251,7 @@ else
 		echo "Nothing to merge from ${SOURCE_VERSION} to ${NEXT_RELEASE}"
 	elif ! git reset --hard "$GITHUB_SHA" || \
 		! git commit --allow-empty -m "Reset branch to ${TARGET_BRANCH} before merging and resolving conflicts from ${SOURCE_VERSION}" || \
-		! git push -u origin "$MERGE_BRANCH";
+		! git push --force -u origin "$MERGE_BRANCH";
 	then
 		echo "Failed to create/push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
@@ -262,7 +262,7 @@ else
 		"git fetch" \
 		"git checkout ${MERGE_BRANCH}" \
 		"git reset --hard origin/${TARGET_BRANCH}" \
-		"git merge -m "Merge ${SOURCE_VERSION} to develop"" \
+		"git merge ${GITHUB_SHA} -m "Merge ${SOURCE_VERSION} to ${NEXT_RELEASE}"" \
 		"# resolve all conflicts" \
 		"git commit" \
 		"git push --force" \
