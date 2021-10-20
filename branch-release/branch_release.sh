@@ -48,7 +48,24 @@ function pr_msg() {
     done
 }
 
-# TODO: Use ${GITHUB_REPOSITORY} == "LabKey/server" to trigger special behavior
+# Update 'labkeyVersion' in server repository
+function update_version() {
+	echo "Updating labkeyVersion to ${TAG}"
+	if ! grep -Eo "labkeyVersion=${RELEASE_NUM}[^0-9]"; then
+		echo "Server repository at ${GITHUB_SHA} doesn't appear to be for ${RELEASE_NUM}." >&2
+		exit 1
+	fi
+	sed -i -e "s@^labkeyVersion=.*@labkeyVersion=${TAG}@" gradle.properties
+	git add gradle.properties
+	git commit -m "Update labkeyVersion to ${TAG}"
+}
+
+if [ "$GITHUB_REPOSITORY" = 'LabKey/server' ]; then
+	SERVER_REPO=true
+else
+	SERVER_REPO=false
+fi
+
 
 # RexEx for extracting branch information from GitHub compare JSON response
 # $> hub api repos/{owner}/{repo}/compare/develop...${GITHUB_SHA}) | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2
@@ -87,6 +104,17 @@ if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
 	SNAPSHOT_CREATED="$?"
 	echo ""
 
+	if $SERVER_REPO; then
+		# Don't create non-SNAPSHOT branch for server repository
+		if [ $SNAPSHOT_CREATED == 0 ]; then
+			echo "${SNAPSHOT_BRANCH} branch successfully created."
+			exit 0
+		else
+			echo "Failed to create ${SNAPSHOT_BRANCH} branch." >&2
+			exit 1
+		fi
+	fi
+
 	echo "Create ${RELEASE_BRANCH} branch."
 	hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${RELEASE_BRANCH}" --raw-field "sha=${GITHUB_SHA}"
 	RELEASE_CREATED="$?"
@@ -99,6 +127,13 @@ if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
 		echo "Failed to create ${RELEASE_NUM} release branches." >&2
 		exit 1
 	fi
+fi
+
+if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
+	echo "Create non-SNAPSHOT branch in server repository for '.0' release"
+	git checkout -b "$RELEASE_BRANCH" "$GITHUB_SHA"
+	update_version
+	git push -u origin "$RELEASE_BRANCH"
 fi
 
 # Create branch and PR for final release
