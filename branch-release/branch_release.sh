@@ -57,6 +57,13 @@ AHEAD_BY_EXP='"ahead_by":\d+'
 # Get patch number from tag '19.3.11' => '11'
 PATCH_NUMBER="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '(^[0-9]+$)' )"
 
+# Don't include full tag in PR and branch names for non-releases (e.g. '21.10.Merge') 
+if [ -z "${PATCH_NUMBER:-}" ]; then
+	SOURCE_VERSION=$RELEASE_NUM;
+else
+	SOURCE_VERSION=$TAG;
+fi
+
 SNAPSHOT_BRANCH="release${RELEASE_NUM}-SNAPSHOT"
 RELEASE_BRANCH="release${RELEASE_NUM}"
 
@@ -134,6 +141,7 @@ else
 		"_Generated automatically._" \
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
+		"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${FF_BRANCH}" \
 		| hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
 	then
 		echo "Failed to create pull request for $FF_BRANCH" >&2
@@ -158,7 +166,7 @@ esac
 if [ -n "${NEXT_RELEASE:-}" ]; then
     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
 	if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
-		MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${TAG}"
+		MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${SOURCE_VERSION}"
     else
         echo ""
         echo "Next ESR release '${TARGET_BRANCH}' doesn't exist. Consider merging to unreleased monthly version."
@@ -184,7 +192,7 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
                     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
                     if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
                         # 'SNAPSHOT' branch exists but '.0' release hasn't been created. Merge to it!
-                        MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${TAG}"
+                        MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${SOURCE_VERSION}"
                     else
                         echo ""
                         echo "${TARGET_BRANCH} doesn't exist. No eligible monthly release to merge to."
@@ -204,7 +212,7 @@ fi
 if [ -z "${MERGE_BRANCH:-}" ]; then
 	TARGET_BRANCH='develop'
 	NEXT_RELEASE='develop'
-	MERGE_BRANCH=fb_merge_${TAG}
+	MERGE_BRANCH=fb_merge_${SOURCE_VERSION}
 fi
 
 echo ""
@@ -221,15 +229,16 @@ git config --global user.email "teamcity@labkey.com"
 
 # Create branch and PR for merge forward
 git checkout -b "$MERGE_BRANCH" --no-track origin/"$TARGET_BRANCH"
-if git merge --no-ff "$GITHUB_SHA" -m "Merge ${TAG} to ${NEXT_RELEASE}"; then
+if git merge --no-ff "$GITHUB_SHA" -m "Merge ${SOURCE_VERSION} to ${NEXT_RELEASE}"; then
 	if ! git push -u origin "$MERGE_BRANCH"; then
 		echo "Failed to push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
 	fi
-	if ! pr_msg "Merge ${TAG} to ${NEXT_RELEASE}" \
+	if ! pr_msg "Merge ${SOURCE_VERSION} to ${NEXT_RELEASE}" \
 		"_Generated automatically._" \
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
+		"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
 		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
 	then
 		echo "Failed to create pull request for ${MERGE_BRANCH}" >&2
@@ -239,16 +248,28 @@ else
 	# merge failed
 	if ! git merge --abort; then
 		# If the --abort fails, a conflict didn't cause the merge to fail. Probably nothing to merge.
-		echo "Nothing to merge from ${TAG} to ${NEXT_RELEASE}"
-	elif ! git commit --allow-empty -m "Reset branch to ${TARGET_BRANCH} before merging and resolving conflicts with ${TAG}" || ! git push -u origin "$MERGE_BRANCH"; then
+		echo "Nothing to merge from ${SOURCE_VERSION} to ${NEXT_RELEASE}"
+	elif ! git reset --hard "$GITHUB_SHA" || \
+		! git commit --allow-empty -m "Reset branch to ${TARGET_BRANCH} before merging and resolving conflicts from ${SOURCE_VERSION}" || \
+		! git push -u origin "$MERGE_BRANCH";
+	then
 		echo "Failed to create/push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
 	elif ! pr_msg \
-		"Merge ${TAG} to ${NEXT_RELEASE} (Conflicts)" \
-		"_Automatic merge failed!_ Please merge \`${TAG}\` into \`${MERGE_BRANCH}\` and resolve conflicts manually." \
-		"Reset branch to ${TARGET_BRANCH} before merging and resolving conflicts with ${TAG}" \
+		"Merge ${SOURCE_VERSION} to ${NEXT_RELEASE} (Conflicts)" \
+		"_Automatic merge failed!_ Please merge \`${SOURCE_VERSION}\` into \`${MERGE_BRANCH}\` and resolve conflicts manually." \
+		"\`\`\`" \
+		"git fetch" \
+		"git checkout ${MERGE_BRANCH}" \
+		"git reset --hard origin/${TARGET_BRANCH}" \
+		"git merge -m "Merge ${SOURCE_VERSION} to develop"" \
+		"# resolve all conflicts" \
+		"git commit" \
+		"git push --force" \
+		"\`\`\`" \
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
+		"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
 		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
 	then
 		echo "Failed to create pull request for ${MERGE_BRANCH}" >&2
