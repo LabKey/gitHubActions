@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# bash strict mode -- http://redsymbol.net/articles/unofficial-bash-strict-mode/
-#set -euo pipefail
-#IFS=$'\n\t'
+# bash strict mode (modified) -- http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -uo pipefail
+IFS=$'\n\t'
 
 if ! command -v hub; then
   echo 'Error: GitHub command line tool is not installed.' >&2
@@ -134,18 +134,22 @@ if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
 	git checkout -b "$RELEASE_BRANCH" "$GITHUB_SHA"
 	update_version
 	git push -u origin "$RELEASE_BRANCH"
+	git tag --force "$TAG"
+	git push --force "$TAG"
 fi
 
 # Create branch and PR for final release
 git fetch --unshallow || true
 
 # Make sure tag is valid
-RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "${GITHUB_SHA}..origin/${RELEASE_BRANCH}" | grep -v -e '^$')"
-echo ""
-if [ -n "$RELEASE_DIFF" ]; then
-	echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) behind latest release." >&2
-	echo "$RELEASE_DIFF" >&2
-	exit 1
+if ! $SERVER_REPO; then # Release branch is expected to be ahead of SNAPSHOT in server repo
+	RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "${GITHUB_SHA}..origin/${RELEASE_BRANCH}" | grep -v -e '^$')"
+	echo ""
+	if [ -n "$RELEASE_DIFF" ]; then
+		echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) behind latest release." >&2
+		echo "$RELEASE_DIFF" >&2
+		exit 1
+	fi
 fi
 RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${SNAPSHOT_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
 echo ""
@@ -162,14 +166,27 @@ if [ -z "${PATCH_NUMBER:-}" ]; then
 	echo "${TAG} does not look like a patch release, just triggering merging forward."
 	echo "Deleting temporary tag"
 	git push origin :"$GITHUB_REF"
-elif [ -z "${RELEASE_DIFF:-}" ]; then
+elif [ -z "${RELEASE_DIFF:-}" ] && ! $SERVER_REPO; then
 	echo "No new changes for ${RELEASE_BRANCH} in ${TAG}."
 else
 	echo "Create fast-forward branch for ${TAG}."
-	FF_BRANCH="ff_${TAG}"
-	if ! hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${FF_BRANCH}" --raw-field "sha=${GITHUB_SHA}"; then
-		echo "Failed to create branch: ${FF_BRANCH}" >&2
-		exit 1
+	FF_BRANCH="${RELEASE_NUM}_ff_${TAG}"
+	if $SERVER_REPO; then
+		# Merging changes from SNAPSHOT to release branch
+		if ! git checkout -b "$FF_BRANCH" --no-track origin/"$RELEASE_BRANCH" || ! git merge --no-commit "$GITHUB_SHA"; then
+			echo "Failed to create branch: ${FF_BRANCH}" >&2
+			exit 1
+		fi
+		update_version
+		git push -u origin "$FF_BRANCH"
+		# Move tag to actual release commit
+		git tag --force "$TAG"
+		git push --force "$TAG"
+	else
+		if ! hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${FF_BRANCH}" --raw-field "sha=${GITHUB_SHA}"; then
+			echo "Failed to create branch: ${FF_BRANCH}" >&2
+			exit 1
+		fi
 	fi
 	echo "Create pull request."
 	if ! pr_msg "Fast-forward for ${TAG}" \
