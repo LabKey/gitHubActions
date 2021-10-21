@@ -133,7 +133,11 @@ if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
 	echo "Create non-SNAPSHOT branch in server repository for '.0' release"
 	git checkout -b "$RELEASE_BRANCH" "$GITHUB_SHA"
 	update_version
-	git push -u origin "$RELEASE_BRANCH"
+	if ! git push -u origin "$RELEASE_BRANCH"; then
+		echo "Failed create ${RELEASE_BRANCH} for ${TAG}." >&2
+		exit 1
+	fi
+	echo "Move tag to release commit"
 	git tag --force "$TAG"
 	git push --force "$TAG"
 fi
@@ -178,7 +182,10 @@ else
 			exit 1
 		fi
 		update_version
-		git push -u origin "$FF_BRANCH"
+		if ! git push -u origin "$FF_BRANCH"; then
+			echo "Failed to push branch: ${FF_BRANCH}" >&2
+			exit 1
+		fi
 		# Move tag to actual release commit
 		git tag --force "$TAG"
 		git push --force "$TAG"
