@@ -312,7 +312,7 @@ else
 		! git commit --allow-empty -m "Reset branch to ${TARGET_BRANCH} before merging and resolving conflicts from ${SOURCE_VERSION}" || \
 		! git push --force -u origin "$MERGE_BRANCH";
 	then
-		echo "Failed to create/push merge branch: ${MERGE_BRANCH}" >&2
+		echo "Failed to create/push placeholder branch for resolving conflicts: ${MERGE_BRANCH}" >&2
 		exit 1
 	elif ! pr_msg \
 		"Merge ${SOURCE_VERSION} to ${NEXT_RELEASE} (Conflicts)" \
