@@ -60,7 +60,7 @@ function update_version() {
 	git commit -m "Update labkeyVersion to ${TAG}"
 }
 
-if [ "$GITHUB_REPOSITORY" = 'LabKey/server' ]; then
+if echo "$GITHUB_REPOSITORY" | grep '/server$'; then
 	SERVER_REPO=true
 else
 	SERVER_REPO=false
