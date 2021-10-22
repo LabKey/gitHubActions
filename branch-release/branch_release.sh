@@ -90,19 +90,24 @@ function update_release_version() {
 		echo "Server repository at ${GITHUB_SHA} doesn't appear to be for ${RELEASE_NUM}." >&2
 		exit 1
 	fi
-	update_version $TAG
+	update_version "$TAG"
 }
 
 # Update SNAPSHOT version
 function update_snapshot_version() {
+	local next_version
+	local branch
+
 	if ! grep "labkeyVersion=${RELEASE_NUM}-SNAPSHOT" gradle.properties; then
 		echo "Server repository at ${GITHUB_SHA} doesn't appear to be for ${RELEASE_NUM}-SNAPSHOT." >&2
 		exit 1
 	fi
-	local next_version="$(increment_version "${RELEASE_NUM}")-SNAPSHOT"
-	local branch="fb_${next_version}"
+
+	next_version="$(increment_version "${RELEASE_NUM}")-SNAPSHOT"
+	branch="fb_${next_version}"
+
 	git checkout -b "$branch" "$GITHUB_SHA"
-	update_version $next_version
+	update_version "$next_version"
 
 	if ! git push -u origin "$branch"; then
 		echo "Failed to push merge branch: ${branch}" >&2
@@ -119,13 +124,16 @@ function update_snapshot_version() {
 }
 
 function increment_version() {
+	local major
+	local minor
+
 	if [ -z "${1:-}" ]; then
 		echo "Script error. No version specified." >&2
 		exit 1
 	fi
 
-	local major="$(echo "$1" | cut -d'.' -f1)"
-	local minor="$(echo "$1" | cut -d'.' -f2)"
+	major="$(echo "$1" | cut -d'.' -f1)"
+	minor="$(echo "$1" | cut -d'.' -f2)"
 
     case "_${minor}" in
       _12)
