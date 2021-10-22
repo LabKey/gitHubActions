@@ -24,13 +24,20 @@ git config --global user.name "github-actions"
 git config --global user.email "teamcity@labkey.com"
 
 echo "Merge approved PR from ${MERGE_BRANCH} to ${TARGET_BRANCH}."
-
-git fetch --unshallow
-git checkout "$TARGET_BRANCH"
-if git merge origin/"$MERGE_BRANCH" -m "Merge ${VERSION} to ${TARGET_BRANCH}" && git push; then
-	echo "Merge successful!";
+if echo "$MERGE_BRANCH" | grep "fb_[0-9]*\.[0-9]*-SNAPSHOT"; then
+	if hub api "repos/{owner}/{repo}/pulls/${PR_NUMBER}/merge"  --raw-field "merge_method=squash"; then
+		echo "Merge successful!"
+		exit 0
+	fi
 else
-	echo "Failed to merge!" >&2
-	hub api "repos/{owner}/{repo}/issues/${PR_NUMBER}/comments" --raw-field "body=__ERROR__ Automatic merge failed!"
-	exit 1
+	git fetch --unshallow
+	git checkout "$TARGET_BRANCH"
+	if git merge origin/"$MERGE_BRANCH" -m "Merge ${VERSION} to ${TARGET_BRANCH}" && git push; then
+		echo "Merge successful!";
+		exit 0
+	fi
 fi
+
+echo "Failed to merge!" >&2
+hub api "repos/{owner}/{repo}/issues/${PR_NUMBER}/comments" --raw-field "body=__ERROR__ Automatic merge failed!"
+exit 1

@@ -50,14 +50,75 @@ function pr_msg() {
 
 # Update 'labkeyVersion' in server repository
 function update_version() {
-	echo "Updating labkeyVersion to ${TAG}"
-	if ! grep -Eo "labkeyVersion=${RELEASE_NUM}[^0-9]"; then
+	if [ -z "${1:-}" ]; then
+		echo "Script error. No version specified." >&2
+		exit 1
+	fi
+	echo "Updating labkeyVersion to ${1}"
+	sed -i -e "s@^labkeyVersion=.*@labkeyVersion=${1}@" gradle.properties
+	git add gradle.properties
+	git commit -m "Update labkeyVersion to ${1}"
+}
+
+# Update version for release
+function update_release_version() {
+	if ! grep "labkeyVersion=${RELEASE_NUM}[^0-9]" gradleProperties; then
 		echo "Server repository at ${GITHUB_SHA} doesn't appear to be for ${RELEASE_NUM}." >&2
 		exit 1
 	fi
-	sed -i -e "s@^labkeyVersion=.*@labkeyVersion=${TAG}@" gradle.properties
-	git add gradle.properties
-	git commit -m "Update labkeyVersion to ${TAG}"
+	update_version $TAG
+}
+
+# Update SNAPSHOT version
+function update_snapshot_version() {
+	if ! grep "labkeyVersion=${RELEASE_NUM}-SNAPSHOT"; then
+		echo "Server repository at ${GITHUB_SHA} doesn't appear to be for ${RELEASE_NUM}-SNAPSHOT." >&2
+		exit 1
+	fi
+	local next_version="$(increment_version "${RELEASE_NUM}")-SNAPSHOT"
+	local branch="fb_${next_version}"
+	git checkout -b "$branch" "$GITHUB_SHA"
+	update_version $next_version
+
+	if ! git push -u origin "$branch"; then
+		echo "Failed to push merge branch: ${branch}" >&2
+		exit 1
+	fi
+	if ! pr_msg "Update labkeyVersion to ${next_version}" \
+		"_Generated automatically._" \
+		"**Approval will trigger automatic merge.**" \
+		| hub pull-request -f -h "$branch" -b develop -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
+	then
+		echo "Failed to create pull request for ${branch}" >&2
+		exit 1
+	fi
+}
+
+function increment_version() {
+	if [ -z "${1:-}" ]; then
+		echo "Script error. No version specified." >&2
+		exit 1
+	fi
+
+	local major="$(echo "$1" | cut -d'.' -f1)"
+	local minor="$(echo "$1" | cut -d'.' -f2)"
+
+    case "_${minor}" in
+      _12)
+        major="$(( major + 1 ))"
+        minor="1"
+        ;;
+      *)
+        minor="$(( minor + 1 ))"
+        ;;
+    esac
+
+	if [ -z "${major:-}" ] || [ -z "${minor:-}" ]; then
+		echo "Unable to determine subsequent version of ${1}." >&2
+		exit 1
+	fi
+
+    echo "${major}.${minor}"
 }
 
 if echo "$GITHUB_REPOSITORY" | grep '/server$'; then
@@ -107,6 +168,7 @@ if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
 	if $SERVER_REPO; then
 		# Don't create non-SNAPSHOT branch for server repository
 		if [ $SNAPSHOT_CREATED == 0 ]; then
+			update_snapshot_version
 			echo "${SNAPSHOT_BRANCH} branch successfully created."
 			exit 0
 		else
@@ -132,7 +194,7 @@ fi
 if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
 	echo "Create non-SNAPSHOT branch in server repository for '.0' release"
 	git checkout -b "$RELEASE_BRANCH" "$GITHUB_SHA"
-	update_version
+	update_release_version
 	if ! git push -u origin "$RELEASE_BRANCH"; then
 		echo "Failed create ${RELEASE_BRANCH} for ${TAG}." >&2
 		exit 1
@@ -181,7 +243,7 @@ else
 			echo "Failed to create branch: ${FF_BRANCH}" >&2
 			exit 1
 		fi
-		update_version
+		update_release_version
 		if ! git push -u origin "$FF_BRANCH"; then
 			echo "Failed to push branch: ${FF_BRANCH}" >&2
 			exit 1
@@ -225,26 +287,18 @@ esac
 if [ -n "${NEXT_RELEASE:-}" ]; then
     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
 	if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
+        echo ""
+        echo "Next ESR release '${TARGET_BRANCH}' exist. Merging ${TAG} to it."
 		MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${SOURCE_VERSION}"
     else
         echo ""
         echo "Next ESR release '${TARGET_BRANCH}' doesn't exist. Consider merging to unreleased monthly version."
         # Next release doesn't exist, check for unreleased monthly version (no '.0' release yet)
         if [ -n "${NEXT_RELEASE:-}" ] && [ -z "${MERGE_BRANCH:-}" ]; then
-            temp_major="$release_major"
-            temp_minor="$release_minor"
+        	NEXT_RELEASE="$RELEASE_NUM"
             for _ in 1 2 3; do
                 # Calculate next monthly release
-                case "_${temp_minor}" in
-                  _12)
-                    temp_major="$(( temp_major + 1 ))"
-                    temp_minor="1"
-                    ;;
-                  *)
-                    temp_minor="$(( temp_minor + 1 ))"
-                    ;;
-                esac
-                NEXT_RELEASE="${temp_major}.${temp_minor}"
+                NEXT_RELEASE="$(increment_version "$NEXT_RELEASE")"
                 # Check for '.0' tag
                 if ! git tag -l | grep "${NEXT_RELEASE}.0" ; then
                     echo "Monthly release ${NEXT_RELEASE}.0 doesn't exist. Check for branch."
