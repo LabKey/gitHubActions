@@ -62,7 +62,7 @@ function update_version() {
 
 # Update version for release
 function update_release_version() {
-	if ! grep "labkeyVersion=${RELEASE_NUM}[^0-9]" gradleProperties; then
+	if ! grep "labkeyVersion=${RELEASE_NUM}[^0-9]" gradle.properties; then
 		echo "Server repository at ${GITHUB_SHA} doesn't appear to be for ${RELEASE_NUM}." >&2
 		exit 1
 	fi
@@ -71,7 +71,7 @@ function update_release_version() {
 
 # Update SNAPSHOT version
 function update_snapshot_version() {
-	if ! grep "labkeyVersion=${RELEASE_NUM}-SNAPSHOT"; then
+	if ! grep "labkeyVersion=${RELEASE_NUM}-SNAPSHOT" gradle.properties; then
 		echo "Server repository at ${GITHUB_SHA} doesn't appear to be for ${RELEASE_NUM}-SNAPSHOT." >&2
 		exit 1
 	fi
