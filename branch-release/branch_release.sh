@@ -11,7 +11,7 @@ fi
 
 REVIEWER1='labkey-tchad'
 REVIEWER2='labkey-teamcity'
-ASSIGNEE='labkey-teamcity'
+ASSIGNEE='labkey-tchad'
 
 if [ -z "${GITHUB_SHA:-}" ]; then
 	echo "Commit hash not specified" >&2
