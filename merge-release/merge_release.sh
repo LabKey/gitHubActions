@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# bash strict mode -- http://redsymbol.net/articles/unofficial-bash-strict-mode/
-#set -euo pipefail
-#IFS=$'\n\t'
+# bash strict mode (modified) -- http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -uo pipefail
+IFS=$'\n\t'
 
 if ! command -v hub; then
   echo 'Error: GitHub command line tool is not installed.' >&2

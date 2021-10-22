@@ -39,6 +39,30 @@ if [ -z "${RELEASE_NUM:-}" ]; then
 	exit 1
 fi
 
+if echo "$GITHUB_REPOSITORY" | grep '/server$'; then
+	SERVER_REPO=true
+else
+	SERVER_REPO=false
+fi
+
+
+# RexEx for extracting branch information from GitHub compare JSON response
+# $> hub api repos/{owner}/{repo}/compare/develop...${GITHUB_SHA}) | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2
+AHEAD_BY_EXP='"ahead_by":\d+'
+
+# Get patch number from tag '19.3.11' => '11'
+PATCH_NUMBER="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '(^[0-9]+$)' )"
+
+# Don't include full tag in PR and branch names for non-releases (e.g. '21.10.Merge')
+if [ -z "${PATCH_NUMBER:-}" ]; then
+	SOURCE_VERSION=$RELEASE_NUM;
+else
+	SOURCE_VERSION=$TAG;
+fi
+
+SNAPSHOT_BRANCH="release${RELEASE_NUM}-SNAPSHOT"
+RELEASE_BRANCH="release${RELEASE_NUM}"
+
 function pr_msg() {
     echo "[bot] $1" # First parameter is PR title
     echo "" # Blank line represents end of PR title
@@ -121,29 +145,8 @@ function increment_version() {
     echo "${major}.${minor}"
 }
 
-if echo "$GITHUB_REPOSITORY" | grep '/server$'; then
-	SERVER_REPO=true
-else
-	SERVER_REPO=false
-fi
-
-
-# RexEx for extracting branch information from GitHub compare JSON response
-# $> hub api repos/{owner}/{repo}/compare/develop...${GITHUB_SHA}) | grep -oE ${AHEAD_BY_EXP} | cut -d':' -f 2
-AHEAD_BY_EXP='"ahead_by":\d+'
-
-# Get patch number from tag '19.3.11' => '11'
-PATCH_NUMBER="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '(^[0-9]+$)' )"
-
-# Don't include full tag in PR and branch names for non-releases (e.g. '21.10.Merge')
-if [ -z "${PATCH_NUMBER:-}" ]; then
-	SOURCE_VERSION=$RELEASE_NUM;
-else
-	SOURCE_VERSION=$TAG;
-fi
-
-SNAPSHOT_BRANCH="release${RELEASE_NUM}-SNAPSHOT"
-RELEASE_BRANCH="release${RELEASE_NUM}"
+git config --global user.name "github-actions"
+git config --global user.email "teamcity@labkey.com"
 
 # Just create release branches if they don't exist
 if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
@@ -336,9 +339,6 @@ if [ -z "${RELEASE_DIFF:-}" ]; then
 	echo "No changes to merge from ${TAG} to ${TARGET_BRANCH}."
 	exit 0
 fi
-
-git config --global user.name "github-actions"
-git config --global user.email "teamcity@labkey.com"
 
 # Create branch and PR for merge forward
 git checkout -b "$MERGE_BRANCH" --no-track origin/"$TARGET_BRANCH"
