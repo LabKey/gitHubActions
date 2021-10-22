@@ -25,7 +25,7 @@ git config --global user.email "teamcity@labkey.com"
 
 echo "Merge approved PR from ${MERGE_BRANCH} to ${TARGET_BRANCH}."
 if echo "$MERGE_BRANCH" | grep "fb_[0-9]*\.[0-9]*-SNAPSHOT"; then
-	if hub api "repos/{owner}/{repo}/pulls/${PR_NUMBER}/merge"  --raw-field "merge_method=squash"; then
+	if hub api -XPUT "repos/{owner}/{repo}/pulls/${PR_NUMBER}/merge" --raw-field "merge_method=squash"; then
 		echo "Merge successful!"
 		exit 0
 	fi
