@@ -10,7 +10,7 @@ if ! command -v hub; then
 fi
 
 REVIEWER1='labkey-tchad'
-REVIEWER2='labkey-klum'
+REVIEWER2='labkey-teamcity'
 ASSIGNEE='labkey-teamcity'
 
 if [ -z "${GITHUB_SHA:-}" ]; then
