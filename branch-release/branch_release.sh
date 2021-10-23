@@ -9,9 +9,8 @@ if ! command -v hub; then
   exit 1
 fi
 
-REVIEWER1='labkey-tchad'
-REVIEWER2='labkey-teamcity'
-ASSIGNEE='labkey-tchad'
+REVIEWER='labkey-teamcity'
+ASSIGNEE='labkey-teamcity'
 
 if [ -z "${GITHUB_SHA:-}" ]; then
 	echo "Commit hash not specified" >&2
@@ -72,8 +71,16 @@ function pr_msg() {
     done
 }
 
+function get_labkey_version() {
+	grep "^labkeyVersion=" gradle.properties | cut -d'=' -f2-
+}
+
 # Update 'labkeyVersion' in server repository
 function update_version() {
+	if ! $SERVER_REPO; then
+		echo "Script error. Attempting to update version in non-server repository ${GITHUB_REPOSITORY}." >&2
+		exit 1
+	fi
 	if [ -z "${1:-}" ]; then
 		echo "Script error. No version specified." >&2
 		exit 1
@@ -86,10 +93,14 @@ function update_version() {
 
 # Update version for release
 function update_release_version() {
-	if ! grep "labkeyVersion=${RELEASE_NUM}[^0-9]" gradle.properties; then
-		echo "Server repository at ${GITHUB_SHA} doesn't appear to be for ${RELEASE_NUM}." >&2
+	local labkeyVersion
+	labkeyVersion="$(get_labkey_version)"
+
+	if ! echo "$labkeyVersion" | grep "${RELEASE_NUM}[^0-9]"; then
+		echo "Refusing to update labkeyVersion from ${labkeyVersion} to ${TAG} at ${GITHUB_SHA}." >&2
 		exit 1
 	fi
+
 	update_version "$TAG"
 }
 
@@ -97,9 +108,12 @@ function update_release_version() {
 function update_snapshot_version() {
 	local next_version
 	local branch
+	local labkeyVersion
 
-	if ! grep "labkeyVersion=${RELEASE_NUM}-SNAPSHOT" gradle.properties; then
-		echo "Server repository at ${GITHUB_SHA} doesn't appear to be for ${RELEASE_NUM}-SNAPSHOT." >&2
+	labkeyVersion="$(get_labkey_version)"
+
+	if [ "$labkeyVersion" != "${RELEASE_NUM}-SNAPSHOT" ]; then
+		echo "Refusing to increment labkeyVersion from ${labkeyVersion} to ${next_version} at ${GITHUB_SHA}." >&2
 		exit 1
 	fi
 
@@ -116,7 +130,7 @@ function update_snapshot_version() {
 	if ! pr_msg "Update labkeyVersion to ${next_version}" \
 		"_Generated automatically._" \
 		"**Approval will trigger automatic merge.**" \
-		| hub pull-request -f -h "$branch" -b develop -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
+		| hub pull-request -f -h "$branch" -b develop -a "$ASSIGNEE" -r "$REVIEWER" -F -;
 	then
 		echo "Failed to create pull request for ${branch}" >&2
 		exit 1
@@ -212,7 +226,7 @@ if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
 	fi
 	echo "Move tag to release commit"
 	git tag --force "$TAG"
-	git push --force "$TAG"
+	git push --force origin "$TAG"
 fi
 
 # Create branch and PR for final release
@@ -261,7 +275,7 @@ else
 		fi
 		# Move tag to actual release commit
 		git tag --force "$TAG"
-		git push --force "$TAG"
+		git push --force origin "$TAG"
 	else
 		if ! hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${FF_BRANCH}" --raw-field "sha=${GITHUB_SHA}"; then
 			echo "Failed to create branch: ${FF_BRANCH}" >&2
@@ -274,7 +288,7 @@ else
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
 		"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${FF_BRANCH}" \
-		| hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
+		| hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" -F -;
 	then
 		echo "Failed to create pull request for $FF_BRANCH" >&2
 		exit 1
@@ -360,7 +374,7 @@ if git merge --no-ff "$GITHUB_SHA" -m "Merge ${SOURCE_VERSION} to ${NEXT_RELEASE
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
 		"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
-		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
+		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" -F -;
 	then
 		echo "Failed to create pull request for ${MERGE_BRANCH}" >&2
 		exit 1
@@ -391,7 +405,7 @@ else
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
 		"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
-		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER1" -r "$REVIEWER2" -F -;
+		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" -F -;
 	then
 		echo "Failed to create pull request for ${MERGE_BRANCH}" >&2
 		exit 1
