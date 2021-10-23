@@ -62,6 +62,7 @@ fi
 SNAPSHOT_BRANCH="release${RELEASE_NUM}-SNAPSHOT"
 RELEASE_BRANCH="release${RELEASE_NUM}"
 
+# Formats lines to be piped into message of 'hub pull-request'
 function pr_msg() {
     echo "[bot] $1" # First parameter is PR title
     echo "" # Blank line represents end of PR title
@@ -71,11 +72,12 @@ function pr_msg() {
     done
 }
 
+# echos the 'labkeyVersion' property from gradle.properties
 function get_labkey_version() {
 	grep "^labkeyVersion=" gradle.properties | cut -d'=' -f2-
 }
 
-# Update 'labkeyVersion' in server repository
+# Update 'labkeyVersion' in gradle.properties
 function update_version() {
 	if ! $SERVER_REPO; then
 		echo "Script error. Attempting to update version in non-server repository ${GITHUB_REPOSITORY}." >&2
@@ -137,6 +139,7 @@ function update_snapshot_version() {
 	fi
 }
 
+# Takes a version number and echos the subsequent version (e.g. 21.11 -> 21.12 or 21.12 -> 22.1)
 function increment_version() {
 	local major
 	local minor
