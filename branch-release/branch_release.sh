@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# bash strict mode (modified) -- http://redsymbol.net/articles/unofficial-bash-strict-mode/
-set -uo pipefail
+# bash strict mode -- http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
 IFS=$'\n\t'
 
 if ! command -v hub; then
@@ -190,33 +190,21 @@ if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
 	# Initial release branch creation (e.g. TAG=20.7.RC0)
 	echo "Create ${SNAPSHOT_BRANCH} branch."
 	hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${SNAPSHOT_BRANCH}" --raw-field "sha=${GITHUB_SHA}"
-	SNAPSHOT_CREATED="$?"
 	echo ""
 
 	if $SERVER_REPO; then
 		# Don't create non-SNAPSHOT branch for server repository
-		if [ $SNAPSHOT_CREATED == 0 ]; then
-			update_snapshot_version
-			echo "${SNAPSHOT_BRANCH} branch successfully created."
-			exit 0
-		else
-			echo "Failed to create ${SNAPSHOT_BRANCH} branch." >&2
-			exit 1
-		fi
+		update_snapshot_version
+		echo "${SNAPSHOT_BRANCH} branch successfully created."
+		exit 0
 	fi
 
 	echo "Create ${RELEASE_BRANCH} branch."
 	hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${RELEASE_BRANCH}" --raw-field "sha=${GITHUB_SHA}"
-	RELEASE_CREATED="$?"
 	echo ""
 
-	if [ $SNAPSHOT_CREATED == 0 ] && [ $RELEASE_CREATED == 0 ]; then
-		echo "${RELEASE_NUM} branches successfully created."
-		exit 0
-	else
-		echo "Failed to create ${RELEASE_NUM} release branches." >&2
-		exit 1
-	fi
+	echo "${RELEASE_NUM} branches successfully created."
+	exit 0
 fi
 
 if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
