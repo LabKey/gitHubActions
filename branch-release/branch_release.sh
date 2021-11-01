@@ -120,7 +120,7 @@ function update_snapshot_version() {
 	fi
 
 	next_version="$(increment_version "${RELEASE_NUM}")-SNAPSHOT"
-	branch="fb_${next_version}"
+	branch="fb_bump_${next_version}"
 
 	git checkout -b "$branch" "$GITHUB_SHA"
 	update_version "$next_version"
