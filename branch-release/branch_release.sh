@@ -260,7 +260,7 @@ if [ -z "${PATCH_NUMBER:-}" ]; then
 	echo "${TAG} does not look like a patch release, just triggering merging forward."
 	echo "Deleting temporary tag"
 	git push origin :"$GITHUB_REF"
-elif [ -z "${RELEASE_DIFF:-}" ]; then
+elif [ -z "${RELEASE_DIFF:-}" ] && ! $SERVER_REPO ; then
 	echo "No new changes for ${RELEASE_BRANCH} in ${TAG}."
 else
 	echo "Create fast-forward branch for ${TAG}."
