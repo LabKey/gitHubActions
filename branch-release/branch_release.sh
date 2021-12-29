@@ -120,7 +120,7 @@ function update_snapshot_version() {
 	fi
 
 	next_version="$(increment_version "${RELEASE_NUM}")-SNAPSHOT"
-	branch="fb_${next_version}"
+	branch="fb_bot_${next_version}"
 
 	git checkout -b "$branch" "$GITHUB_SHA"
 	update_version "$next_version"
@@ -265,7 +265,7 @@ else
 		echo "No new changes for ${RELEASE_BRANCH} in ${TAG}."
 	else
 		echo "Create fast-forward branch for ${TAG}."
-		FF_BRANCH="${RELEASE_NUM}_ff_${TAG}"
+		FF_BRANCH="${RELEASE_NUM}_ff_bot_${TAG}"
 		if $SERVER_REPO; then
 			# Merging changes from SNAPSHOT to release branch
 			if ! git checkout -b "$FF_BRANCH" --no-track origin/"$RELEASE_BRANCH" || ! git merge --no-commit "$GITHUB_SHA"; then
@@ -319,7 +319,7 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
 	if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
         echo ""
         echo "Next ESR release '${TARGET_BRANCH}' exist. Merging ${TAG} to it."
-		MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${SOURCE_VERSION}"
+		MERGE_BRANCH="${NEXT_RELEASE}_fb_bot_merge_${SOURCE_VERSION}"
     else
         echo ""
         echo "Next ESR release '${TARGET_BRANCH}' doesn't exist. Consider merging to unreleased monthly version."
@@ -335,7 +335,7 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
                     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
                     if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
                         # 'SNAPSHOT' branch exists but '.0' release hasn't been created. Merge to it!
-                        MERGE_BRANCH="${NEXT_RELEASE}_fb_merge_${SOURCE_VERSION}"
+                        MERGE_BRANCH="${NEXT_RELEASE}_fb_bot_merge_${SOURCE_VERSION}"
                     else
                         echo ""
                         echo "${TARGET_BRANCH} doesn't exist. No eligible monthly release to merge to."
@@ -355,7 +355,7 @@ fi
 if [ -z "${MERGE_BRANCH:-}" ]; then
 	TARGET_BRANCH='develop'
 	NEXT_RELEASE='develop'
-	MERGE_BRANCH=fb_merge_${SOURCE_VERSION}
+	MERGE_BRANCH=fb_bot_merge_${SOURCE_VERSION}
 fi
 
 echo ""
