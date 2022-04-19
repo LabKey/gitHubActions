@@ -221,83 +221,88 @@ fi
 
 git fetch --unshallow || true
 
-if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
-	echo "Create non-SNAPSHOT branch in server repository for '.0' release"
-	git checkout -b "$RELEASE_BRANCH" "$GITHUB_SHA"
-	update_release_version
-	if ! git push -u origin "$RELEASE_BRANCH"; then
-		echo "Failed create ${RELEASE_BRANCH} for ${TAG}." >&2
-		exit 1
-	fi
-	echo "Move tag to release commit"
-	git tag --force "$TAG"
-	git push --force origin "$TAG"
-
+if [ -z "${PATCH_NUMBER:-}" ]; then
+	echo "${TAG} does not look like a maintenance release, just triggering merging forward."
+	echo "Deleting temporary tag"
+	git push origin :"$GITHUB_REF"
 else
-	# Create branch and PR for final release if necessary
+	if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
+		echo "Create non-SNAPSHOT branch in server repository for '.0' release"
+		git checkout -b "$RELEASE_BRANCH" "$GITHUB_SHA"
+		update_release_version
+		if ! git push -u origin "$RELEASE_BRANCH"; then
+			echo "Failed create ${RELEASE_BRANCH} for ${TAG}." >&2
+			exit 1
+		fi
+		echo "Move tag to release commit"
+		git tag --force "$TAG"
+		git push --force origin "$TAG"
 
-	# Make sure tag is valid
-	if ! $SERVER_REPO; then # Release branch is expected to be ahead of SNAPSHOT in server repo
-		RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "${GITHUB_SHA}..origin/${RELEASE_BRANCH}" | grep -v -e '^$')"
+	else
+		# Create branch and PR for final release if necessary
+
+		# Make sure tag is valid
+		if ! $SERVER_REPO; then # Release branch is expected to be ahead of SNAPSHOT in server repo
+			RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "${GITHUB_SHA}..origin/${RELEASE_BRANCH}" | grep -v -e '^$')"
+			echo ""
+			if [ -n "$RELEASE_DIFF" ]; then
+				echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) behind latest release." >&2
+				echo "$RELEASE_DIFF" >&2
+				exit 1
+			fi
+		fi
+		RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${SNAPSHOT_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
 		echo ""
 		if [ -n "$RELEASE_DIFF" ]; then
-			echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) behind latest release." >&2
+			echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) ahead of current snapshot branch." >&2
 			echo "$RELEASE_DIFF" >&2
 			exit 1
 		fi
-	fi
-	RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${SNAPSHOT_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
-	echo ""
-	if [ -n "$RELEASE_DIFF" ]; then
-		echo "Improper release tag. ${TAG} is $(echo "$RELEASE_DIFF" | wc -l | xargs) commit(s) ahead of current snapshot branch." >&2
-		echo "$RELEASE_DIFF" >&2
-		exit 1
+
+		RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${RELEASE_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
+		echo ""
+		# Create branch and PR for final release
+		if [ -z "${RELEASE_DIFF:-}" ] && ! $SERVER_REPO ; then
+			echo "No new changes for ${RELEASE_BRANCH} in ${TAG}."
+		else
+			echo "Create fast-forward branch for ${TAG}."
+			FF_BRANCH="${RELEASE_NUM}_ff_bot_${TAG}"
+			if $SERVER_REPO; then
+				# Merging changes from SNAPSHOT to release branch
+				if ! git checkout -b "$FF_BRANCH" --no-track origin/"$RELEASE_BRANCH" || ! git merge --no-commit "$GITHUB_SHA"; then
+					echo "Failed to create branch: ${FF_BRANCH}" >&2
+					exit 1
+				fi
+				update_release_version
+				if ! git push -u origin "$FF_BRANCH"; then
+					echo "Failed to push branch: ${FF_BRANCH}" >&2
+					exit 1
+				fi
+				# Move tag to actual release commit
+				git tag --force "$TAG"
+				git push --force origin "$TAG"
+			else
+				if ! hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${FF_BRANCH}" --raw-field "sha=${GITHUB_SHA}"; then
+					echo "Failed to create branch: ${FF_BRANCH}" >&2
+					exit 1
+				fi
+			fi
+			echo "Create pull request."
+			if ! pr_msg "Fast-forward for ${TAG}" \
+				"_Generated automatically._" \
+				"**Approve all matching PRs simultaneously.**" \
+				"**Approval will trigger automatic merge.**" \
+				"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${FF_BRANCH}" \
+				| hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" -F -;
+			then
+				echo "Failed to create pull request for $FF_BRANCH" >&2
+				exit 1
+			fi
+		fi
 	fi
 
-	RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${RELEASE_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
-	echo ""
-	# Create branch and PR for final release
-	if [ -z "${PATCH_NUMBER:-}" ]; then
-		echo "${TAG} does not look like a patch release, just triggering merging forward."
-		echo "Deleting temporary tag"
-		git push origin :"$GITHUB_REF"
-	elif [ -z "${RELEASE_DIFF:-}" ] && ! $SERVER_REPO ; then
-		echo "No new changes for ${RELEASE_BRANCH} in ${TAG}."
-	else
-		echo "Create fast-forward branch for ${TAG}."
-		FF_BRANCH="${RELEASE_NUM}_ff_bot_${TAG}"
-		if $SERVER_REPO; then
-			# Merging changes from SNAPSHOT to release branch
-			if ! git checkout -b "$FF_BRANCH" --no-track origin/"$RELEASE_BRANCH" || ! git merge --no-commit "$GITHUB_SHA"; then
-				echo "Failed to create branch: ${FF_BRANCH}" >&2
-				exit 1
-			fi
-			update_release_version
-			if ! git push -u origin "$FF_BRANCH"; then
-				echo "Failed to push branch: ${FF_BRANCH}" >&2
-				exit 1
-			fi
-			# Move tag to actual release commit
-			git tag --force "$TAG"
-			git push --force origin "$TAG"
-		else
-			if ! hub api 'repos/{owner}/{repo}/git/refs' --raw-field "ref=refs/heads/${FF_BRANCH}" --raw-field "sha=${GITHUB_SHA}"; then
-				echo "Failed to create branch: ${FF_BRANCH}" >&2
-				exit 1
-			fi
-		fi
-		echo "Create pull request."
-		if ! pr_msg "Fast-forward for ${TAG}" \
-			"_Generated automatically._" \
-			"**Approve all matching PRs simultaneously.**" \
-			"**Approval will trigger automatic merge.**" \
-			"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${FF_BRANCH}" \
-			| hub pull-request -f -h "$FF_BRANCH" -b "$RELEASE_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" -F -;
-		then
-			echo "Failed to create pull request for $FF_BRANCH" >&2
-			exit 1
-		fi
-	fi
+	echo "Script complete for maintenance release ${TAG}"
+	exit 0
 fi
 
 # Determine next ESR release
