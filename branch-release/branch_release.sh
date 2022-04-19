@@ -221,12 +221,10 @@ fi
 
 git fetch --unshallow || true
 
-if [ -z "${PATCH_NUMBER:-}" ]; then
-	echo "${TAG} does not look like a maintenance release, just triggering merging forward."
-	echo "Deleting temporary tag"
-	git push origin :"$GITHUB_REF"
+if [ -n "${PATCH_NUMBER:-}" ]; then
 
-else
+	echo "Creating maintenance release ${TAG}"
+
 	if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
 		echo "Create non-SNAPSHOT branch in server repository for '.0' release"
 		git checkout -b "$RELEASE_BRANCH" "$GITHUB_SHA"
@@ -304,6 +302,11 @@ else
 
 	echo "Script complete for maintenance release ${TAG}"
 	exit 0
+
+else
+	echo "${TAG} does not look like a maintenance release, just triggering merging forward."
+	echo "Deleting temporary tag"
+	git push origin :"$GITHUB_REF"
 fi
 
 # Determine next ESR release
