@@ -225,6 +225,7 @@ if [ -z "${PATCH_NUMBER:-}" ]; then
 	echo "${TAG} does not look like a maintenance release, just triggering merging forward."
 	echo "Deleting temporary tag"
 	git push origin :"$GITHUB_REF"
+
 else
 	if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
 		echo "Create non-SNAPSHOT branch in server repository for '.0' release"
