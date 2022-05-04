@@ -351,6 +351,18 @@ if [ -z "${MERGE_BRANCH:-}" ]; then
 	MERGE_BRANCH=fb_bot_merge_${RELEASE_NUM}
 fi
 
+if hub api "repos/{owner}/{repo}/git/refs/heads/${MERGE_BRANCH}"; then
+
+	RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${MERGE_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
+	if [ -z "${RELEASE_DIFF:-}" ]; then
+	    echo "${MERGE_BRANCH} already exists. Not going to attempt to merge forward."
+	    exit 0
+	fi
+	echo "${MERGE_BRANCH} is missing changes from new tag '${TAG}'. Previous merge forward was not resolved." >&2
+	echo "${MERGE_BRANCH} may be out of sync in other repositories." >&2
+	exit 1
+else
+
 echo ""
 echo "Merging ${TAG} to ${TARGET_BRANCH}"
 
