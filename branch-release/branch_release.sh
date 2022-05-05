@@ -52,13 +52,6 @@ AHEAD_BY_EXP='"ahead_by":\d+'
 # Get patch number from tag '19.3.11' => '11'
 PATCH_NUMBER="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '(^[0-9]+$)' )"
 
-# Don't include full tag in PR and branch names for non-releases (e.g. '21.10.Merge')
-if [ -z "${PATCH_NUMBER:-}" ]; then
-	SOURCE_VERSION=$RELEASE_NUM;
-else
-	SOURCE_VERSION=$TAG;
-fi
-
 SNAPSHOT_BRANCH="release${RELEASE_NUM}-SNAPSHOT"
 RELEASE_BRANCH="release${RELEASE_NUM}"
 
@@ -319,7 +312,7 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
 	if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
         echo ""
         echo "Next ESR release '${TARGET_BRANCH}' exist. Merging ${TAG} to it."
-		MERGE_BRANCH="${NEXT_RELEASE}_fb_bot_merge_${SOURCE_VERSION}"
+		MERGE_BRANCH="${NEXT_RELEASE}_fb_bot_merge_${RELEASE_NUM}"
     else
         echo ""
         echo "Next ESR release '${TARGET_BRANCH}' doesn't exist. Consider merging to unreleased monthly version."
@@ -335,7 +328,7 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
                     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
                     if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
                         # 'SNAPSHOT' branch exists but '.0' release hasn't been created. Merge to it!
-                        MERGE_BRANCH="${NEXT_RELEASE}_fb_bot_merge_${SOURCE_VERSION}"
+                        MERGE_BRANCH="${NEXT_RELEASE}_fb_bot_merge_${RELEASE_NUM}"
                     else
                         echo ""
                         echo "${TARGET_BRANCH} doesn't exist. No eligible monthly release to merge to."
@@ -355,7 +348,19 @@ fi
 if [ -z "${MERGE_BRANCH:-}" ]; then
 	TARGET_BRANCH='develop'
 	NEXT_RELEASE='develop'
-	MERGE_BRANCH=fb_bot_merge_${SOURCE_VERSION}
+	MERGE_BRANCH=fb_bot_merge_${RELEASE_NUM}
+fi
+
+if hub api "repos/{owner}/{repo}/git/refs/heads/${MERGE_BRANCH}"; then
+
+	RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${MERGE_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
+	if [ -z "${RELEASE_DIFF:-}" ]; then
+	    echo "${MERGE_BRANCH} already exists. Not going to attempt to merge forward."
+	    exit 0
+	fi
+	echo "${MERGE_BRANCH} is missing changes from new tag '${TAG}'. Previous merge forward was not resolved." >&2
+	echo "${MERGE_BRANCH} may be out of sync in other repositories." >&2
+	exit 1
 fi
 
 echo ""
@@ -369,12 +374,12 @@ fi
 
 # Create branch and PR for merge forward
 git checkout -b "$MERGE_BRANCH" --no-track origin/"$TARGET_BRANCH"
-if git merge --no-ff "$GITHUB_SHA" -m "Merge ${SOURCE_VERSION} to ${NEXT_RELEASE}"; then
+if git merge --no-ff "$GITHUB_SHA" -m "Merge ${RELEASE_NUM} to ${NEXT_RELEASE}"; then
 	if ! git push --force -u origin "$MERGE_BRANCH"; then
 		echo "Failed to push merge branch: ${MERGE_BRANCH}" >&2
 		exit 1
 	fi
-	if ! pr_msg "Merge ${SOURCE_VERSION} to ${NEXT_RELEASE}" \
+	if ! pr_msg "Merge ${RELEASE_NUM} to ${NEXT_RELEASE}" \
 		"_Generated automatically._" \
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
@@ -388,21 +393,21 @@ else
 	# merge failed
 	if ! git merge --abort; then
 		# If the --abort fails, a conflict didn't cause the merge to fail. Probably nothing to merge.
-		echo "Nothing to merge from ${SOURCE_VERSION} to ${NEXT_RELEASE}"
+		echo "Nothing to merge from ${RELEASE_NUM} to ${NEXT_RELEASE}"
 	elif ! git reset --hard "$GITHUB_SHA" || \
-		! git commit --allow-empty -m "Reset branch to ${TARGET_BRANCH} before merging and resolving conflicts from ${SOURCE_VERSION}" || \
+		! git commit --allow-empty -m "Reset branch to ${TARGET_BRANCH} before merging and resolving conflicts from ${RELEASE_NUM}" || \
 		! git push --force -u origin "$MERGE_BRANCH";
 	then
 		echo "Failed to create/push placeholder branch for resolving conflicts: ${MERGE_BRANCH}" >&2
 		exit 1
 	elif ! pr_msg \
-		"Merge ${SOURCE_VERSION} to ${NEXT_RELEASE} (Conflicts)" \
-		"_Automatic merge failed!_ Please merge \`${SOURCE_VERSION}\` into \`${MERGE_BRANCH}\` and resolve conflicts manually." \
+		"Merge ${RELEASE_NUM} to ${NEXT_RELEASE} (Conflicts)" \
+		"_Automatic merge failed!_ Please merge \`${RELEASE_NUM}\` into \`${MERGE_BRANCH}\` and resolve conflicts manually." \
 		"\`\`\`" \
 		"git fetch" \
 		"git checkout ${MERGE_BRANCH}" \
 		"git reset --hard origin/${TARGET_BRANCH}" \
-		"git merge ${GITHUB_SHA} -m \"Merge ${SOURCE_VERSION} to ${NEXT_RELEASE}\"" \
+		"git merge ${GITHUB_SHA} -m \"Merge ${RELEASE_NUM} to ${NEXT_RELEASE}\"" \
 		"# resolve all conflicts" \
 		"git commit" \
 		"git push --force" \
