@@ -357,11 +357,10 @@ if hub api "repos/{owner}/{repo}/git/refs/heads/${MERGE_BRANCH}"; then
 	if [ -z "${RELEASE_DIFF:-}" ]; then
 	    echo "${MERGE_BRANCH} already exists. Not going to attempt to merge forward."
 	    exit 0
-	else
-		echo "${MERGE_BRANCH} is missing changes from new tag '${TAG}'. Previous merge forward was not resolved." >&2
-		echo "${MERGE_BRANCH} may be out of sync in other repositories." >&2
-		exit 1
 	fi
+	echo "${MERGE_BRANCH} is missing changes from new tag '${TAG}'. Previous merge forward was not resolved." >&2
+	echo "${MERGE_BRANCH} may be out of sync in other repositories." >&2
+	exit 1
 fi
 
 echo ""
