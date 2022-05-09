@@ -357,10 +357,11 @@ if hub api "repos/{owner}/{repo}/git/refs/heads/${MERGE_BRANCH}"; then
 	if [ -z "${RELEASE_DIFF:-}" ]; then
 	    echo "${MERGE_BRANCH} already exists. Not going to attempt to merge forward."
 	    exit 0
+	else
+		echo "${MERGE_BRANCH} is missing changes from new tag '${TAG}'. Previous merge forward was not resolved." >&2
+		echo "${MERGE_BRANCH} may be out of sync in other repositories." >&2
+		exit 1
 	fi
-	echo "${MERGE_BRANCH} is missing changes from new tag '${TAG}'. Previous merge forward was not resolved." >&2
-	echo "${MERGE_BRANCH} may be out of sync in other repositories." >&2
-	exit 1
 fi
 
 echo ""
@@ -381,9 +382,10 @@ if git merge --no-ff "$GITHUB_SHA" -m "Merge ${RELEASE_NUM} to ${NEXT_RELEASE}";
 	fi
 	if ! pr_msg "Merge ${RELEASE_NUM} to ${NEXT_RELEASE}" \
 		"_Generated automatically._" \
+		"Merging chnages from: ${GITHUB_SHA}" \
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
-		"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
+		"Verify all PRs before approving: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
 		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" -F -;
 	then
 		echo "Failed to create pull request for ${MERGE_BRANCH}" >&2
@@ -414,7 +416,7 @@ else
 		"\`\`\`" \
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
-		"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
+		"Verify all PRs before approving: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
 		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" -F -;
 	then
 		echo "Failed to create pull request for ${MERGE_BRANCH}" >&2

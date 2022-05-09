@@ -34,7 +34,7 @@ if echo "$MERGE_BRANCH" | grep "fb_[0-9]*\.[0-9]*-SNAPSHOT"; then
 else
 	git fetch --unshallow
 	git checkout "$TARGET_BRANCH"
-	if git merge origin/"$MERGE_BRANCH" -m "Merge ${VERSION} to ${TARGET_BRANCH}" && git push; then
+	if git merge origin/"$MERGE_BRANCH" -m "Merge ${VERSION} to ${TARGET_BRANCH} (#${PR_NUMBER})" && git push; then
 		echo "Merge successful!";
 		exit 0
 	fi
