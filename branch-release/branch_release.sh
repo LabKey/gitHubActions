@@ -381,9 +381,10 @@ if git merge --no-ff "$GITHUB_SHA" -m "Merge ${RELEASE_NUM} to ${NEXT_RELEASE}";
 	fi
 	if ! pr_msg "Merge ${RELEASE_NUM} to ${NEXT_RELEASE}" \
 		"_Generated automatically._" \
+		"Merging chnages from: ${GITHUB_SHA}" \
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
-		"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
+		"Verify all PRs before approving: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
 		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" -F -;
 	then
 		echo "Failed to create pull request for ${MERGE_BRANCH}" >&2
@@ -414,7 +415,7 @@ else
 		"\`\`\`" \
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
-		"View all PRs: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
+		"Verify all PRs before approving: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
 		| hub pull-request -f -h "$MERGE_BRANCH" -b "$TARGET_BRANCH" -a "$ASSIGNEE" -r "$REVIEWER" -F -;
 	then
 		echo "Failed to create pull request for ${MERGE_BRANCH}" >&2
