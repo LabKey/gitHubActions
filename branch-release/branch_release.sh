@@ -381,7 +381,7 @@ if git merge --no-ff "$GITHUB_SHA" -m "Merge ${RELEASE_NUM} to ${NEXT_RELEASE}";
 	fi
 	if ! pr_msg "Merge ${RELEASE_NUM} to ${NEXT_RELEASE}" \
 		"_Generated automatically._" \
-		"Merging chnages from: ${GITHUB_SHA}" \
+		"Merging changes from: ${GITHUB_SHA}" \
 		"**Approve all matching PRs simultaneously.**" \
 		"**Approval will trigger automatic merge.**" \
 		"Verify all PRs before approving: https://internal.labkey.com/Scrumtime/Backlog/harvest-gitOpenPullRequests.view?branch=${MERGE_BRANCH}" \
