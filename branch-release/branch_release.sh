@@ -409,7 +409,9 @@ else
 		"git checkout ${MERGE_BRANCH}" \
 		"git reset --hard origin/${TARGET_BRANCH}" \
 		"git merge ${GITHUB_SHA} -m \"Merge ${RELEASE_NUM} to ${NEXT_RELEASE}\"" \
-		"# resolve all conflicts" \
+		"\`\`\`" \
+		"Resolve all conflicts (using IntelliJ or \`git mergetool\`)" \
+		"\`\`\`" \
 		"git commit" \
 		"git push --force" \
 		"\`\`\`" \
