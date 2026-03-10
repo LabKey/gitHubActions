@@ -212,7 +212,7 @@ if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
 	fi
 fi
 
-if [ `git rev-parse --is-shallow-repository` = 'true' ] && ! git fetch --unshallow; then
+if [ "$(git rev-parse --is-shallow-repository)" = 'true' ] && ! git fetch --unshallow; then
 	echo "Failed to unshallow reposiotry. Rerun action." >&2
 	exit 1
 fi
