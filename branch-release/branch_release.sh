@@ -166,7 +166,7 @@ function increment_version() {
 git config --global user.name "github-actions"
 git config --global user.email "teamcity@labkey.com"
 
-# Just create release branches if they don't exist
+# Just create release branches if they don't exist. Use API to check because branches aren't present in shallow clone.
 if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
 	# Check to see if TeamCity tagged the wrong branch
 	AHEAD_DEVELOP="$(hub api "repos/{owner}/{repo}/compare/develop...${GITHUB_SHA}" | grep -oE "${AHEAD_BY_EXP}" | cut -d':' -f 2)"
@@ -212,7 +212,10 @@ if ! hub api "repos/{owner}/{repo}/branches/${SNAPSHOT_BRANCH}"; then
 	fi
 fi
 
-git fetch --unshallow || true
+if [ "$(git rev-parse --is-shallow-repository)" = 'true' ] && ! git fetch --unshallow; then
+	echo "Failed to unshallow repository. Rerun action." >&2
+	exit 1
+fi
 
 if $SERVER_REPO && [ "$PATCH_NUMBER" == "0" ]; then
 	echo "Create non-SNAPSHOT branch in server repository for '.0' release"
@@ -309,7 +312,7 @@ esac
 
 if [ -n "${NEXT_RELEASE:-}" ]; then
     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
-	if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
+	if git rev-parse --verify --quiet "refs/heads/${TARGET_BRANCH}"; then
         echo ""
         echo "Next ESR release '${TARGET_BRANCH}' exist. Merging ${TAG} to it."
 		MERGE_BRANCH="${NEXT_RELEASE}_fb_bot_merge_${RELEASE_NUM}"
@@ -323,10 +326,10 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
                 # Calculate next monthly release
                 NEXT_RELEASE="$(increment_version "$NEXT_RELEASE")"
                 # Check for '.0' tag
-                if ! git tag -l | grep "${NEXT_RELEASE}.0" ; then
+                if ! git rev-parse --verify --quiet "refs/tags/${NEXT_RELEASE}.0" ; then
                     echo "Monthly release ${NEXT_RELEASE}.0 doesn't exist. Check for branch."
                     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
-                    if hub api "repos/{owner}/{repo}/git/refs/heads/${TARGET_BRANCH}"; then
+                    if git rev-parse --verify --quiet "refs/heads/${TARGET_BRANCH}"; then
                         # 'SNAPSHOT' branch exists but '.0' release hasn't been created. Merge to it!
                         MERGE_BRANCH="${NEXT_RELEASE}_fb_bot_merge_${RELEASE_NUM}"
                     else
@@ -351,7 +354,7 @@ if [ -z "${MERGE_BRANCH:-}" ]; then
 	MERGE_BRANCH=fb_bot_merge_${RELEASE_NUM}
 fi
 
-if hub api "repos/{owner}/{repo}/git/refs/heads/${MERGE_BRANCH}"; then
+if git rev-parse --verify --quiet "refs/heads/${MERGE_BRANCH}"; then
 
 	RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${MERGE_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
 	if [ -z "${RELEASE_DIFF:-}" ]; then
