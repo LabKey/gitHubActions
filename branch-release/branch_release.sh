@@ -326,7 +326,7 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
                 # Calculate next monthly release
                 NEXT_RELEASE="$(increment_version "$NEXT_RELEASE")"
                 # Check for '.0' tag
-                if ! git tag -l | grep "${NEXT_RELEASE}.0" ; then
+                if ! git rev-parse --verify --quiet "refs/tags/${NEXT_RELEASE}.0" ; then
                     echo "Monthly release ${NEXT_RELEASE}.0 doesn't exist. Check for branch."
                     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
                     if git rev-parse --verify --quiet "refs/heads/${TARGET_BRANCH}"; then
