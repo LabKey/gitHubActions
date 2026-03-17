@@ -312,7 +312,7 @@ esac
 
 if [ -n "${NEXT_RELEASE:-}" ]; then
     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
-	if git rev-parse --verify --quiet "refs/heads/${TARGET_BRANCH}"; then
+	if git rev-parse --verify --quiet "refs/remotes/origin/${TARGET_BRANCH}"; then
         echo ""
         echo "Next ESR release '${TARGET_BRANCH}' exist. Merging ${TAG} to it."
 		MERGE_BRANCH="${NEXT_RELEASE}_fb_bot_merge_${RELEASE_NUM}"
@@ -329,7 +329,7 @@ if [ -n "${NEXT_RELEASE:-}" ]; then
                 if ! git rev-parse --verify --quiet "refs/tags/${NEXT_RELEASE}.0" ; then
                     echo "Monthly release ${NEXT_RELEASE}.0 doesn't exist. Check for branch."
                     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
-                    if git rev-parse --verify --quiet "refs/heads/${TARGET_BRANCH}"; then
+                    if git rev-parse --verify --quiet "refs/remotes/origin/${TARGET_BRANCH}"; then
                         # 'SNAPSHOT' branch exists but '.0' release hasn't been created. Merge to it!
                         MERGE_BRANCH="${NEXT_RELEASE}_fb_bot_merge_${RELEASE_NUM}"
                     else
@@ -354,7 +354,7 @@ if [ -z "${MERGE_BRANCH:-}" ]; then
 	MERGE_BRANCH=fb_bot_merge_${RELEASE_NUM}
 fi
 
-if git rev-parse --verify --quiet "refs/heads/${MERGE_BRANCH}"; then
+if git rev-parse --verify --quiet "refs/remotes/origin/${MERGE_BRANCH}"; then
 
 	RELEASE_DIFF="$(git log --cherry-pick --oneline --no-decorate "origin/${MERGE_BRANCH}..${GITHUB_SHA}" | grep -v -e '^$')"
 	if [ -z "${RELEASE_DIFF:-}" ]; then
