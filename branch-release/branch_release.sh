@@ -55,7 +55,7 @@ PATCH_NUMBER="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '(^[0-9]+$)' )"
 # By default, this automation will skip monthly releases that have locked in a '.0' release
 # If you manually set a patch number that starts with a 
 # Get forced target release from tag '26.3._26.4' => '26.4'
-FORCED_TARGET_RELEASE="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '^_(.+$)' | cut -d'_' -f2- )"
+FORCED_TARGET_RELEASE="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '(^_[0-9]+\.[0-9]+$)' | cut -d'_' -f2- )"
 
 SNAPSHOT_BRANCH="release${RELEASE_NUM}-SNAPSHOT"
 RELEASE_BRANCH="release${RELEASE_NUM}"
