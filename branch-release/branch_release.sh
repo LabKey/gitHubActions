@@ -52,6 +52,11 @@ AHEAD_BY_EXP='"ahead_by":\d+'
 # Get patch number from tag '19.3.11' => '11'
 PATCH_NUMBER="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '(^[0-9]+$)' )"
 
+# By default, this automation will skip monthly releases that have locked in a '.0' release
+# If you manually set a patch number that starts with a 
+# Get forced target release from tag '26.3._26.4' => '26.4'
+FORCED_TARGET_RELEASE="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '^_(.+$)' | cut -d'_' -f2- )"
+
 SNAPSHOT_BRANCH="release${RELEASE_NUM}-SNAPSHOT"
 RELEASE_BRANCH="release${RELEASE_NUM}"
 
@@ -310,7 +315,18 @@ case "_${release_minor}" in
   _3|_7) NEXT_RELEASE="${release_major}.$(( release_minor + 4 ))";;
 esac
 
-if [ -n "${NEXT_RELEASE:-}" ]; then
+
+if [ -n "${FORCED_TARGET_RELEASE:-}" ]; then
+    TARGET_BRANCH=release${FORCED_TARGET_RELEASE}-SNAPSHOT
+	if git rev-parse --verify --quiet "refs/remotes/origin/${TARGET_BRANCH}"; then
+        echo ""
+        echo "Overriding default merge forward target with '${TARGET_BRANCH}'. Merging ${TAG} to it."
+		MERGE_BRANCH="${FORCED_TARGET_RELEASE}_fb_bot_merge_${RELEASE_NUM}"
+	else
+	    echo "The created tag '${TAG}' specified an invalid target release override: ${TARGET_BRANCH}." >&2
+	    exit 1
+    fi
+elif [ -n "${NEXT_RELEASE:-}" ]; then
     TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
 	if git rev-parse --verify --quiet "refs/remotes/origin/${TARGET_BRANCH}"; then
         echo ""
