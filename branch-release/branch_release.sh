@@ -53,7 +53,7 @@ AHEAD_BY_EXP='"ahead_by":\d+'
 PATCH_NUMBER="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '(^[0-9]+$)' )"
 
 # By default, this automation will skip monthly releases that have locked in a '.0' release
-# If you manually set a patch number that starts with a 
+# If you manually set a patch number that starts with a '_', it will merge forward to the specified version
 # Get forced target release from tag '26.3._26.4' => '26.4'
 FORCED_TARGET_RELEASE="$( echo "$TAG" | cut -d'.' -f3- | grep -oE '(^_[0-9]+\.[0-9]+$)' | cut -d'_' -f2- )"
 
