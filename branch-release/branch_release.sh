@@ -31,7 +31,7 @@ fi
 TAG="$( echo "$GITHUB_REF" | sed -e 's/refs\/tags\///' )"
 
 # Trim patch number from tag '19.3.11' => '19.3'
-RELEASE_NUM="$( echo "$TAG" | grep -oE '([0-9]+\.[0-9]+)' )"
+RELEASE_NUM="$( echo "$TAG" | grep -oE '(^[0-9]+\.[0-9]+)' )"
 
 if [ -z "${RELEASE_NUM:-}" ]; then
 	echo "Tag does not appear to be for a release: ${TAG}" >&2
