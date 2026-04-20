@@ -317,10 +317,11 @@ esac
 
 
 if [ -n "${FORCED_TARGET_RELEASE:-}" ]; then
-    TARGET_BRANCH=release${FORCED_TARGET_RELEASE}-SNAPSHOT
+	NEXT_RELEASE=${FORCED_TARGET_RELEASE}
+    TARGET_BRANCH=release${NEXT_RELEASE}-SNAPSHOT
 	if git rev-parse --verify --quiet "refs/remotes/origin/${TARGET_BRANCH}"; then
         echo ""
-        echo "Overriding default merge forward target with '${TARGET_BRANCH}'. Merging ${TAG} to it."
+        echo "Overriding default merge forward target with '${TARGET_BRANCH}'. Merging tag ${TAG} to it."
 		MERGE_BRANCH="${FORCED_TARGET_RELEASE}_fb_bot_merge_${RELEASE_NUM}"
 	else
 	    echo "The created tag '${TAG}' specified an invalid target release override: ${TARGET_BRANCH}." >&2
