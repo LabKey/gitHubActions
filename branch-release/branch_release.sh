@@ -269,7 +269,7 @@ else
 		FF_BRANCH="${RELEASE_NUM}_ff_bot_${TAG}"
 		if $SERVER_REPO; then
 			# Merging changes from SNAPSHOT to release branch
-			if ! git checkout -b "$FF_BRANCH" --no-track origin/"$RELEASE_BRANCH" || ! git merge --no-commit "$GITHUB_SHA"; then
+			if ! git checkout -b "$FF_BRANCH" --no-track origin/"$RELEASE_BRANCH" || ! git merge -Xtheirs --no-commit "$GITHUB_SHA"; then
 				echo "Failed to create branch: ${FF_BRANCH}" >&2
 				exit 1
 			fi
