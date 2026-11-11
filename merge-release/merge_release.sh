@@ -34,8 +34,8 @@ function delete_merge_branch() {
 			# GitHub deleted it automatically
 			echo "${MERGE_BRANCH} has already been deleted."
 		else
-			echo "::warning::Failed to delete merged branch: ${MERGE_BRANCH}" >&2
-			echo "$response" >&2
+			echo "::error::Failed to delete merged branch: ${MERGE_BRANCH}"
+			echo "$response"
 		fi
 	fi
 }
