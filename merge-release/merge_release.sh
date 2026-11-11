@@ -27,10 +27,13 @@ git config --global user.email "teamcity@labkey.com"
 # interfere with subsequent releases. Failure is not fatal; the merge has already succeeded.
 function delete_merge_branch() {
 	local merged=false
+	local response
 
 	# Wait for GitHub to mark the PR as merged. Deleting the head branch first would close the PR without merging it.
 	for _ in {1..12}; do
-		if hub api "repos/{owner}/{repo}/pulls/${PR_NUMBER}" | grep -qE '"merged":[[:space:]]*true'; then
+		# Capture response before searching it; piping directly to 'grep -q' can fail with SIGPIPE under pipefail
+		response="$(hub api "repos/{owner}/{repo}/pulls/${PR_NUMBER}")"
+		if grep -qE '"merged":[[:space:]]*true' <<< "$response"; then
 			merged=true
 			break
 		fi
@@ -41,14 +44,15 @@ function delete_merge_branch() {
 		return
 	fi
 
-	if ! hub api "repos/{owner}/{repo}/git/ref/heads/${MERGE_BRANCH}" > /dev/null 2>&1; then
-		echo "${MERGE_BRANCH} has already been deleted."
-		return
-	fi
-
 	echo "Delete merged branch: ${MERGE_BRANCH}"
-	if ! hub api -XDELETE "repos/{owner}/{repo}/git/refs/heads/${MERGE_BRANCH}" > /dev/null; then
-		echo "::warning::Failed to delete merged branch: ${MERGE_BRANCH}" >&2
+	if ! response="$(hub api -XDELETE "repos/{owner}/{repo}/git/refs/heads/${MERGE_BRANCH}" 2>&1)"; then
+		if grep -q 'Reference does not exist' <<< "$response"; then
+			# GitHub deleted it automatically
+			echo "${MERGE_BRANCH} has already been deleted."
+		else
+			echo "::warning::Failed to delete merged branch: ${MERGE_BRANCH}" >&2
+			echo "$response" >&2
+		fi
 	fi
 }
 
