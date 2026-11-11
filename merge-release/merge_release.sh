@@ -26,23 +26,7 @@ git config --global user.email "teamcity@labkey.com"
 # GitHub doesn't always delete the head branch after a PR is merged. Delete it explicitly so that stale branches don't
 # interfere with subsequent releases. Failure is not fatal; the merge has already succeeded.
 function delete_merge_branch() {
-	local merged=false
 	local response
-
-	# Wait for GitHub to mark the PR as merged. Deleting the head branch first would close the PR without merging it.
-	for _ in {1..12}; do
-		# Capture response before searching it; piping directly to 'grep -q' can fail with SIGPIPE under pipefail
-		response="$(hub api "repos/{owner}/{repo}/pulls/${PR_NUMBER}")"
-		if grep -qE '"merged":[[:space:]]*true' <<< "$response"; then
-			merged=true
-			break
-		fi
-		sleep 5
-	done
-	if ! $merged; then
-		echo "::warning::PR #${PR_NUMBER} has not been marked as merged. Not deleting ${MERGE_BRANCH}." >&2
-		return
-	fi
 
 	echo "Delete merged branch: ${MERGE_BRANCH}"
 	if ! response="$(hub api -XDELETE "repos/{owner}/{repo}/git/refs/heads/${MERGE_BRANCH}" 2>&1)"; then
