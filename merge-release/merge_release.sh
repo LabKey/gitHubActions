@@ -23,6 +23,23 @@ VERSION="$( echo "$MERGE_BRANCH" | grep -oE '([^_]+)$' )"
 git config --global user.name "github-actions"
 git config --global user.email "teamcity@labkey.com"
 
+# GitHub doesn't always delete the head branch after a PR is merged. Delete it explicitly so that stale branches don't
+# interfere with subsequent releases. Failure is not fatal; the merge has already succeeded.
+function delete_merge_branch() {
+	local response
+
+	echo "Delete merged branch: ${MERGE_BRANCH}"
+	if ! response="$(hub api -XDELETE "repos/{owner}/{repo}/git/refs/heads/${MERGE_BRANCH}" 2>&1)"; then
+		if grep -q 'Reference does not exist' <<< "$response"; then
+			# GitHub deleted it automatically
+			echo "${MERGE_BRANCH} has already been deleted."
+		else
+			echo "::error::Failed to delete merged branch: ${MERGE_BRANCH}"
+			echo "$response"
+		fi
+	fi
+}
+
 echo "Merge approved PR from ${MERGE_BRANCH} to ${TARGET_BRANCH}."
 if echo "$MERGE_BRANCH" | grep "fb_[0-9]*\.[0-9]*-SNAPSHOT"; then
 	# Special branch name for updating SNAPSHOT	version in develop (e.g. 'fb_21.12-SNAPSHOT')
@@ -36,6 +53,7 @@ else
 	git checkout "$TARGET_BRANCH"
 	if git merge origin/"$MERGE_BRANCH" -m "Merge ${VERSION} to ${TARGET_BRANCH} (#${PR_NUMBER})" && git push; then
 		echo "Merge successful!";
+		delete_merge_branch
 		exit 0
 	fi
 fi
