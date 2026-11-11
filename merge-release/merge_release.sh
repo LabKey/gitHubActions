@@ -62,7 +62,6 @@ if echo "$MERGE_BRANCH" | grep "fb_[0-9]*\.[0-9]*-SNAPSHOT"; then
 	echo "Triggering squash merge of ${MERGE_BRANCH} to update SNAPSHOT version"
 	if hub api -XPUT "repos/{owner}/{repo}/pulls/${PR_NUMBER}/merge" --raw-field "merge_method=squash"; then
 		echo "Merge successful!"
-		delete_merge_branch
 		exit 0
 	fi
 else
